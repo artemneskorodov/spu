@@ -1,0 +1,9 @@
+{
+    "cSpell.words": [
+        "PUSHR",
+        "recalloc"
+    ],
+    "files.associations": {
+        "cmath": "cpp"
+    }
+}
