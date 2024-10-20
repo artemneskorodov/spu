@@ -163,6 +163,7 @@ asm_error_t destroy_code(code_t *code) {
     _free(code->output_code);
     _free(code->labels.labels);
     _free(code->labels.fixup);
+    _memory_destroy_log();
     memset(code, 0, sizeof(code_t));
     return ASM_SUCCESS;
 }

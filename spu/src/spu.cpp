@@ -138,6 +138,7 @@ spu_error_t destroy_spu_code(spu_t *spu) {
     _free(spu->code);
     stack_destroy(&spu->stack);
     memset(spu, 0, sizeof(spu_t));
+    _memory_destroy_log();
     return SPU_SUCCESS;
 }
 

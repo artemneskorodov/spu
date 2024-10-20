@@ -17,7 +17,8 @@ enum asm_error_t {
     ASM_REGISTER_ERROR          = 12,
     ASM_UNEXPECTED_PARAMETER    = 13,
     ASM_LABEL_ERROR             = 14,
-    ASM_WRITING_FILE_ERROR      = 15
+    ASM_WRITING_FILE_ERROR      = 15,
+    ASM_NO_LABEL                = 16,
 };
 
 #endif

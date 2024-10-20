@@ -25,11 +25,6 @@ asm_error_t code_labels_init               (labels_array_t *labels_array);
 asm_error_t get_label_instruction_pointer  (labels_array_t *labels_array,
                                             char           *label_name,
                                             uint64_t       *code_label_pointer);
-asm_error_t add_fix_up                     (labels_array_t *labels_array,
-                                            size_t          label_number,
-                                            uint64_t       *code_label_pointer);
-asm_error_t check_labels_size              (labels_array_t *labels_array);
-asm_error_t check_fixup_size               (labels_array_t *labels_array);
 asm_error_t do_fixups                      (labels_array_t *labels_array);
 asm_error_t code_add_label                 (labels_array_t *labels_array,
                                             char           *label_name,
