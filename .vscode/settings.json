@@ -4,6 +4,8 @@
         "recalloc"
     ],
     "files.associations": {
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "compare": "cpp",
+        "cstdlib": "cpp"
     }
 }

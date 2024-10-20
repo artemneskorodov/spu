@@ -35,7 +35,7 @@ static const size_t   registers_number          = 4;
 static const uint32_t immediate_constant_mask   = 0b001;
 static const uint32_t register_parameter_mask   = 0b010;
 static const uint32_t random_access_memory_mask = 0b100;
-static const char    *assembler_name            = "CHTO ZA MASHINA ETOT PROCESSOR BLYAAA";
+static const char    *assembler_name            = "CHTO ZA MASHINA ETOT PROCESSOR";
 static const uint32_t assembler_version         = 1;
 static const size_t   assembler_name_size       = 64;
 

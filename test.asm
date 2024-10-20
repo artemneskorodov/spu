@@ -1,4 +1,4 @@
-push 0
+push 1
 pop bx
 start:
 push bx
