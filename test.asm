@@ -1,4 +1,5 @@
 push 0
+dump
 pop bx
 startb:
 push 0
