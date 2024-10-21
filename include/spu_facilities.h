@@ -27,6 +27,7 @@ enum command_t : uint32_t {
     CMD_POP     = 0x14,
     CMD_CALL    = 0x15,
     CMD_RET     = 0x16,
+    CMD_DRAW    = 0x17,
 };
 
 static const char    *spu_register_names[]      = {"ax", "bx", "cx", "sp",
@@ -38,6 +39,8 @@ static const uint32_t random_access_memory_mask = 0b100;
 static const char    *assembler_name            = "CHTO ZA MASHINA ETOT PROCESSOR";
 static const uint32_t assembler_version         = 1;
 static const size_t   assembler_name_size       = 64;
+static const size_t   spu_drawing_width         = 10;
+static const size_t   spu_drawing_height        = 10;
 
 struct program_header_t {
     char     assembler_name[assembler_name_size];

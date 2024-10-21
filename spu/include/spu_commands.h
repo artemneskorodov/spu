@@ -24,7 +24,7 @@ enum spu_error_t {
 
 typedef double argument_t;
 
-static const size_t random_access_memory_size = 10;
+static const size_t random_access_memory_size = 100;
 
 struct spu_t {
     stack_t       *stack;
@@ -58,5 +58,6 @@ spu_error_t run_command_jne  (spu_t *spu);
 spu_error_t run_command_pop  (spu_t *spu);
 spu_error_t run_command_call (spu_t *spu);
 spu_error_t run_command_ret  (spu_t *spu);
+spu_error_t run_command_draw (spu_t *spu);
 
 #endif

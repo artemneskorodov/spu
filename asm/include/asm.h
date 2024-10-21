@@ -48,6 +48,7 @@ static const command_prototype_t supported_commands[] = {
     {.command_name = "pop" , .command_value = CMD_POP },
     {.command_name = "call", .command_value = CMD_CALL},
     {.command_name = "ret" , .command_value = CMD_RET },
+    {.command_name = "draw", .command_value = CMD_DRAW}
 };
 
 #endif

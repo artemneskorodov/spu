@@ -10,6 +10,12 @@
 #include "spu_facilities.h"
 #include "memory.h"
 
+/**
+======================================================================================================
+     @brief Initializing size of stack
+
+======================================================================================================
+*/
 static const size_t stack_init_size = 16;
 
 static spu_error_t init_spu_code   (spu_t      *spu,
@@ -18,6 +24,19 @@ static spu_error_t run_spu_code    (spu_t      *spu);
 static spu_error_t destroy_spu_code(spu_t      *spu);
 static spu_error_t run_command     (spu_t      *spu);
 
+/**
+======================================================================================================
+    @brief Runs SPU
+
+    @details Initializes SPU code, runs and destroys it
+
+    @param [in] argc    Number of arguments from command line
+    @param [in] argv    Arguments from command line
+
+    @return Exit code
+
+======================================================================================================
+*/
 int main(int argc, const char *argv[]) {
     spu_t spu = {};
     if(argc != 2) {
@@ -37,7 +56,23 @@ int main(int argc, const char *argv[]) {
     return EXIT_SUCCESS;
 }
 
+/**
+======================================================================================================
+    @brief Initializes code structure
 
+    @details Reads header from file name,
+             compares processor and assembler names,
+             compares assembler version.
+
+             Reads the code from file to code structure
+
+    @param [in] spu         SPU structure
+    @param [in] fil_name    Name of binary code file
+
+    @return Error code
+
+======================================================================================================
+*/
 spu_error_t init_spu_code(spu_t      *spu,
                           const char *file_name) {
     C_ASSERT(spu       != NULL, return SPU_NULL_POINTER );
@@ -110,6 +145,20 @@ spu_error_t init_spu_code(spu_t      *spu,
     return SPU_SUCCESS;
 }
 
+/**
+======================================================================================================
+    @brief Runs code
+
+    @details Runs commands from code array, while functions does not return exit code
+
+    @param [in] spu    SPU structure
+
+    @return Error code
+
+    @todo Add checking that instruction_pointer is less then code_size
+
+======================================================================================================
+*/
 spu_error_t run_spu_code(spu_t *spu) {
     C_ASSERT(spu != NULL, return SPU_NULL_POINTER);
 
@@ -134,6 +183,18 @@ spu_error_t run_spu_code(spu_t *spu) {
     }
 }
 
+/**
+======================================================================================================
+    @brief Destroys SPU structure
+
+    @details Frees code array, destroys stack and sets all spu structure to zeros
+
+    @param [in] spu     SPU structure
+
+    @return Error code
+
+======================================================================================================
+*/
 spu_error_t destroy_spu_code(spu_t *spu) {
     _free(spu->code);
     stack_destroy(&spu->stack);
@@ -142,6 +203,18 @@ spu_error_t destroy_spu_code(spu_t *spu) {
     return SPU_SUCCESS;
 }
 
+/**
+======================================================================================================
+    @brief Runs one command
+
+    @details Reads command as last element in code array, runs particular command function
+
+    @param [in] spu     SPU structure
+
+    @return Error code
+
+======================================================================================================
+*/
 spu_error_t run_command(spu_t *spu) {
     command_t *code_pointer = (command_t *)(spu->code + spu->instruction_pointer);
     command_t operation_code = code_pointer[1];
@@ -192,6 +265,8 @@ spu_error_t run_command(spu_t *spu) {
             return run_command_call (spu);
         case CMD_RET:
             return run_command_ret  (spu);
+        case CMD_DRAW:
+            return run_command_draw (spu);
         case CMD_UNKNOWN:
             return SPU_UNKNOWN_COMMAND;
         default:
