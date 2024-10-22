@@ -14,31 +14,28 @@
 
 static const char  *default_output_filename = "a.bin";
 
-static asm_error_t parse_flags                    (code_t       *code,
-                                                   int           argc,
-                                                   const char   *argv[]);
-static asm_error_t read_source_code               (code_t       *code);
-static asm_error_t write_code                     (code_t       *code);
-static asm_error_t destroy_code                   (code_t       *code);
+static asm_error_t parse_flags      (code_t     *code,
+                                     int         argc,
+                                     const char *argv[]);
+static asm_error_t read_source_code (code_t     *code);
+static asm_error_t write_code       (code_t     *code);
+static asm_error_t destroy_code     (code_t     *code);
 
 int main(int argc, const char *argv[]) {
     code_t code = {};
-    if(parse_flags(&code, argc, argv) != ASM_SUCCESS) {
+    if(parse_flags     (&code, argc, argv) != ASM_SUCCESS) {
         destroy_code(&code);
         return EXIT_FAILURE;
     }
-
-    if(read_source_code(&code) != ASM_SUCCESS) {
+    if(read_source_code(&code)             != ASM_SUCCESS) {
         destroy_code(&code);
         return EXIT_FAILURE;
     }
-
-    if(compile_code(&code) != ASM_SUCCESS) {
+    if(compile_code    (&code)             != ASM_SUCCESS) {
         destroy_code(&code);
         return EXIT_FAILURE;
     }
-
-    if(write_code(&code) != ASM_SUCCESS) {
+    if(write_code      (&code)             != ASM_SUCCESS) {
         destroy_code(&code);
         return EXIT_FAILURE;
     }
@@ -47,6 +44,23 @@ int main(int argc, const char *argv[]) {
     return EXIT_SUCCESS;
 }
 
+/**
+======================================================================================================
+    @brief      Parses flags from console.
+
+    @details    There are only two variants:
+                1. asm 'source'
+                2. asm 'source' -o 'output'
+                Default output file name is 'a.bin'
+
+    @param [in] code                Code structure.
+    @param [in] argc                Number of arguments typed in by user.
+    @param [in] argv                Arguments from console.
+
+    @return Error code.
+
+======================================================================================================
+*/
 asm_error_t parse_flags(code_t *code, int argc, const char *argv[]) {
     C_ASSERT(code != NULL, return ASM_NULL_CODE);
 
@@ -61,10 +75,12 @@ asm_error_t parse_flags(code_t *code, int argc, const char *argv[]) {
         return ASM_SUCCESS;
     }
     if(argc == 4) {
-        if(strcmp(argv[2], "-o") != 0)
+        if(strcmp(argv[2], "-o") != 0) {
             color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                          "Unknown flag '%s'.\r\n",
                          argv[2]);
+            return ASM_FLAGS_ERROR;
+        }
 
         code->input_filename  = argv[1];
         code->output_filename = argv[3];
@@ -76,6 +92,19 @@ asm_error_t parse_flags(code_t *code, int argc, const char *argv[]) {
     return ASM_FLAGS_ERROR;
 }
 
+/**
+======================================================================================================
+    @brief      Reads source code text.
+
+    @details    Allocates memory to source code string,
+                Reads text from file with name, which is determined by parse_flags(...).
+
+    @param [in] code                Code structure.
+
+    @return Error code.
+
+======================================================================================================
+*/
 asm_error_t read_source_code(code_t *code) {
     C_ASSERT(code                 != NULL, return ASM_NULL_CODE     );
     C_ASSERT(code->input_filename != NULL, return ASM_NO_INPUT_FILES);
@@ -114,6 +143,19 @@ asm_error_t read_source_code(code_t *code) {
     return ASM_SUCCESS;
 }
 
+/**
+======================================================================================================
+    @brief      Writes compiled code to output file.
+
+    @details    Function writes assembler header and compiled code to file with name,
+                determined by parse_flags(...).
+
+    @param [in] code                Code structure.
+
+    @return Error code.
+
+======================================================================================================
+*/
 asm_error_t write_code(code_t *code) {
     C_ASSERT(code != NULL, return ASM_NULL_CODE);
 
@@ -156,13 +198,27 @@ asm_error_t write_code(code_t *code) {
     return ASM_SUCCESS;
 }
 
+/**
+======================================================================================================
+    @brief      Destroys code structure.
+
+    @details    Frees source_code, output_code, labels and fixups.
+                Closes memory dump file.
+                Sets code structure memory to zeros.
+
+    @param [in] code                Code structure.
+
+    @return Error code.
+
+======================================================================================================
+*/
 asm_error_t destroy_code(code_t *code) {
     C_ASSERT(code != NULL, return ASM_NULL_CODE);
 
-    _free(code->source_code);
-    _free(code->output_code);
+    _free(code->source_code  );
+    _free(code->output_code  );
     _free(code->labels.labels);
-    _free(code->labels.fixup);
+    _free(code->labels.fixup );
     _memory_destroy_log();
     memset(code, 0, sizeof(code_t));
     return ASM_SUCCESS;

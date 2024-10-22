@@ -24,14 +24,14 @@ static const size_t labels_init_size    = 32;
 */
 static const size_t fixups_init_size    = 32;
 
-static asm_error_t try_find_label(labels_array_t *labels_array,
-                                  char           *label_name,
-                                  uint64_t       *code_label_pointer);
-static asm_error_t add_fix_up                     (labels_array_t *labels_array,
-                                                   size_t          label_number,
-                                                   uint64_t       *code_label_pointer);
-static asm_error_t check_labels_size              (labels_array_t *labels_array);
-static asm_error_t check_fixup_size               (labels_array_t *labels_array);
+static asm_error_t try_find_label    (labels_array_t *labels_array,
+                                      char           *label_name,
+                                      uint64_t       *code_label_pointer);
+static asm_error_t add_fix_up        (labels_array_t *labels_array,
+                                      size_t          label_number,
+                                      uint64_t       *code_label_pointer);
+static asm_error_t check_labels_size (labels_array_t *labels_array);
+static asm_error_t check_fixup_size  (labels_array_t *labels_array);
 
 /**
 ======================================================================================================
@@ -58,12 +58,12 @@ struct fixup_t {
 
 /**
 ======================================================================================================
-    @brief Initializes labels structure.
+    @brief      Initializes labels structure.
 
-    @details Labels structure consist of two arrays: labels and fixups.
-             This function allocates memory to this arrays and sets default values in labels structure.
+    @details    Labels structure consist of two arrays: labels and fixups.
+                This function allocates memory to this arrays and sets default values in labels structure.
 
-    @param [in] labels_array  Labels structure pointer.
+    @param [in] labels_array        Labels structure pointer.
 
     @return Error code
 
@@ -93,16 +93,16 @@ asm_error_t code_labels_init(labels_array_t *labels_array) {
 
 /**
 ======================================================================================================
-    @brief Searches if label already exists in labels array.
+    @brief      Searches if label already exists in labels array.
 
-    @details Function compares written label names with label_name.
-             If written label is found, function tries to read its instruction pointer,
-             If label is undefined yet, function adds code element to fixups array.
-             If it is the first time label occurs, function return ASM_NO_LABEL.
+    @details    Function compares written label names with label_name.
+                If written label is found, function tries to read its instruction pointer,
+                If label is undefined yet, function adds code element to fixups array.
+                If it is the first time label occurs, function return ASM_NO_LABEL.
 
-    @param [in] labels_array  Labels structure pointer.
-    @param [in] label_name    String with label name.
-    @param [in] code_label_pointer Place in code where label represents instruction pointer value.
+    @param [in] labels_array        Labels structure pointer.
+    @param [in] label_name          String with label name.
+    @param [in] code_label_pointer  Place in code where label represents instruction pointer value.
 
     @return Error code (ASM_NO_LABEL if label does not exist)
 
@@ -134,16 +134,16 @@ asm_error_t try_find_label(labels_array_t *labels_array,
 
 /**
 ======================================================================================================
-    @brief Writes label instruction pointer.
+    @brief      Writes label instruction pointer.
 
-    @details Firstly function tries to find existing label.
-             If it is found, it is expected that function try_find_label(...) wrote it.
-             If there is no existing label with searching name, function adds label to labels array,
-             and if needed adds it to fixups array.
+    @details    Firstly function tries to find existing label.
+                If it is found, it is expected that function try_find_label(...) wrote it.
+                If there is no existing label with searching name, function adds label to
+                labels array and if needed adds it to fixups array.
 
-    @param [in] labels_array  Labels structure pointer.
-    @param [in] label_name    String with label name.
-    @param [in] code_label_pointer Place in code where label represents instruction pointer value.
+    @param [in] labels_array        Labels structure pointer.
+    @param [in] label_name          String with label name.
+    @param [in] code_label_pointer  Place in code where label represents instruction pointer value.
 
     @return Error code
 
@@ -183,17 +183,17 @@ asm_error_t get_label_instruction_pointer(labels_array_t *labels_array,
 
 /**
 ======================================================================================================
-    @brief Adds label to labels array.
+    @brief      Adds label to labels array.
 
-    @details Function tries to find existing label with the same name.
-             If there is not such label, it writes a new one.
-             It is expected that is_defined is set to true only when instruction pointer represents
-             the final label value.
+    @details    Function tries to find existing label with the same name.
+                If there is not such label, it writes a new one.
+                It is expected that is_defined is set to true only when instruction pointer represents
+                the final label value.
 
-    @param [in] labels_array  Labels structure pointer.
-    @param [in] label_name    String with label name.
+    @param [in] labels_array        Labels structure pointer.
+    @param [in] label_name          String with label name.
     @param [in] instruction_pointer Instruction pointer value represented by label.
-    @param [in] is_defined    Determines if label is already defined.
+    @param [in] is_defined          Determines if label is already defined.
 
     @return Error code
 
@@ -229,11 +229,11 @@ asm_error_t code_add_label(labels_array_t *labels_array,
 
 /**
 ======================================================================================================
-    @brief Checks if size of label is sufficient.
+    @brief      Checks if size of label is sufficient.
 
-    @details If number of labels is bigger then or equal to size of array, it reallocated label array.
+    @details    If number of labels is bigger then or equal to size of array, it reallocated label array.
 
-    @param [in] labels_array  Labels structure pointer.
+    @param [in] labels_array        Labels structure pointer.
 
     @return Error code
 
@@ -263,13 +263,13 @@ asm_error_t check_labels_size(labels_array_t *labels_array) {
 
 /**
 ======================================================================================================
-    @brief Adds fixup to labels structure.
+    @brief      Adds fixup to labels structure.
 
-    @details Adds one element to fixups array, checking if size is sufficient.
+    @details    Adds one element to fixups array, checking if size is sufficient.
 
-    @param [in] labels_array  Labels structure pointer.
-    @param [in] label_number  Index of label in labels array.
-    @param [in] code_label_pointer Place in code where label represents instruction pointer value.
+    @param [in] labels_array        Labels structure pointer.
+    @param [in] label_number        Index of label in labels array.
+    @param [in] code_label_pointer  Place in code where label represents instruction pointer value.
 
     @return Error code
 
@@ -293,11 +293,11 @@ asm_error_t add_fix_up(labels_array_t *labels_array,
 
 /**
 ======================================================================================================
-    @brief Checks if size of fixups array is sufficient.
+    @brief      Checks if size of fixups array is sufficient.
 
-    @details If number of fixups is bigger then or equal to size, it reallocates fixups array.
+    @details    If number of fixups is bigger then or equal to size, it reallocates fixups array.
 
-    @param [in] labels_array  Labels structure pointer.
+    @param [in] labels_array        Labels structure pointer.
 
     @return Error code
 
@@ -327,11 +327,11 @@ asm_error_t check_fixup_size(labels_array_t *labels_array) {
 
 /**
 ======================================================================================================
-    @brief Checks if string is label.
+    @brief      Checks if string is label.
 
-    @details Returns true if there is ':' in string.
+    @details    Returns true if there is ':' in string.
 
-    @param [in] command The string, with read command.
+    @param [in] command             The string, with read command.
 
     @return Error code
 
@@ -349,12 +349,12 @@ bool is_label(char *command) {
 
 /**
 ======================================================================================================
-    @brief Fills missing code elements.
+    @brief      Fills missing code elements.
 
-    @details Runs throw array of fixups and writes label instruction pointer value,
-             using pointer which is expected to be after compilation in labels array.
+    @details    Runs throw array of fixups and writes label instruction pointer value,
+                using pointer which is expected to be after compilation in labels array.
 
-    @param [in] labels_array  Labels structure pointer.
+    @param [in] labels_array        Labels structure pointer.
 
     @return Error code
 

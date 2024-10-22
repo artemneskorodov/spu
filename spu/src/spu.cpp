@@ -12,26 +12,32 @@
 
 /**
 ======================================================================================================
-     @brief Initializing size of stack
+     @brief     Initializing size of stack
 
 ======================================================================================================
 */
 static const size_t stack_init_size = 16;
 
-static spu_error_t init_spu_code   (spu_t      *spu,
-                                    const char *file_name);
-static spu_error_t run_spu_code    (spu_t      *spu);
-static spu_error_t destroy_spu_code(spu_t      *spu);
-static spu_error_t run_command     (spu_t      *spu);
+static spu_error_t init_spu_code    (spu_t      *spu,
+                                     const char *file_name);
+static spu_error_t run_spu_code     (spu_t      *spu);
+static spu_error_t destroy_spu_code (spu_t      *spu);
+static spu_error_t run_command      (spu_t      *spu);
+static spu_error_t read_file_header (spu_t      *spu,
+                                     FILE       *code_file,
+                                     const char *file_name);
+static spu_error_t read_file_code   (spu_t      *spu,
+                                     FILE       *code_file,
+                                     const char *file_name);
 
 /**
 ======================================================================================================
-    @brief Runs SPU
+    @brief      Runs SPU
 
-    @details Initializes SPU code, runs and destroys it
+    @details    Initializes SPU code, runs and destroys it
 
-    @param [in] argc    Number of arguments from command line
-    @param [in] argv    Arguments from command line
+    @param [in] argc                Number of arguments from command line
+    @param [in] argv                Arguments from command line
 
     @return Exit code
 
@@ -58,16 +64,15 @@ int main(int argc, const char *argv[]) {
 
 /**
 ======================================================================================================
-    @brief Initializes code structure
+    @brief      Initializes code structure
 
-    @details Reads header from file name,
-             compares processor and assembler names,
-             compares assembler version.
+    @details    Reads header from file name,
+                compares processor and assembler names,
+                compares assembler version.
+                Reads the code from file to code structure
 
-             Reads the code from file to code structure
-
-    @param [in] spu         SPU structure
-    @param [in] fil_name    Name of binary code file
+    @param [in] spu                 SPU structure
+    @param [in] fil_name            Name of binary code file
 
     @return Error code
 
@@ -86,49 +91,13 @@ spu_error_t init_spu_code(spu_t      *spu,
         return SPU_READING_ERROR;
     }
 
-    program_header_t header = {};
-    if(fread(&header, 1, sizeof(program_header_t), code_file) != sizeof(program_header_t)) {
-        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "!!!Error while reading code from file '%s'.\r\n",
-                     file_name);
-        return SPU_READING_ERROR;
-    }
+    spu_error_t error_code = SPU_SUCCESS;
+    if((error_code = read_file_header(spu, code_file, file_name)) != SPU_SUCCESS)
+        return error_code;
 
-    if(strcmp(header.assembler_name, assembler_name) != 0) {
-        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "Program '%s' was compiled with assembler '%s',\r\n"
-                     "This processor supports assembler '%s'.\r\n",
-                     file_name,
-                     header.assembler_name,
-                     assembler_name);
-        return SPU_WRONG_ASSEMBLER;
-    }
+    if((error_code = read_file_code(spu, code_file, file_name)) != SPU_SUCCESS)
+        return error_code;
 
-    if(header.assembler_version != assembler_version) {
-        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "This program was compiled with assembler version %llu\r\n"
-                     "And processor supports only %llu.\r\n",
-                     header.assembler_version,
-                     assembler_version);
-        return SPU_WRONG_VERSION;
-    }
-
-    spu->code_size = header.code_size;
-    spu->code      = (uint64_t *)_calloc(header.code_size, sizeof(uint64_t));
-    if(spu->code == NULL) {
-        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "Error while allocating memory to code array.\r\n");
-        return SPU_MEMORY_ERROR;
-    }
-
-    if(fread(spu->code, sizeof(uint64_t), spu->code_size, code_file) != spu->code_size) {
-        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "Error while reading code from file '%s'.\r\n",
-                     file_name);
-        fclose(code_file);
-        _free(spu->code);
-        return SPU_READING_ERROR;
-    }
     fclose(code_file);
 
     spu->instruction_pointer = 0;
@@ -147,11 +116,11 @@ spu_error_t init_spu_code(spu_t      *spu,
 
 /**
 ======================================================================================================
-    @brief Runs code
+    @brief      Runs code
 
-    @details Runs commands from code array, while functions does not return exit code
+    @details    Runs commands from code array, while functions does not return exit code
 
-    @param [in] spu    SPU structure
+    @param [in] spu                 SPU structure
 
     @return Error code
 
@@ -185,11 +154,11 @@ spu_error_t run_spu_code(spu_t *spu) {
 
 /**
 ======================================================================================================
-    @brief Destroys SPU structure
+    @brief      Destroys SPU structure
 
-    @details Frees code array, destroys stack and sets all spu structure to zeros
+    @details    Frees code array, destroys stack and sets all spu structure to zeros
 
-    @param [in] spu     SPU structure
+    @param [in] spu                 SPU structure
 
     @return Error code
 
@@ -205,11 +174,11 @@ spu_error_t destroy_spu_code(spu_t *spu) {
 
 /**
 ======================================================================================================
-    @brief Runs one command
+    @brief      Runs one command
 
-    @details Reads command as last element in code array, runs particular command function
+    @details    Reads command as last element in code array, runs particular command function
 
-    @param [in] spu     SPU structure
+    @param [in] spu                 SPU structure
 
     @return Error code
 
@@ -272,4 +241,90 @@ spu_error_t run_command(spu_t *spu) {
         default:
             return SPU_UNKNOWN_COMMAND;
     }
+}
+
+/**
+======================================================================================================
+    @brief      Reads and checks file header.
+
+    @details    Compares header assembler name and version. Sets code_size in spu_code.
+
+    @param [in] spu                 SPU structure
+    @param [in] code_file           Binary file to run
+    @param [in] file_name           Name of binary file
+
+    @return Error code
+
+======================================================================================================
+*/
+spu_error_t read_file_header (spu_t      *spu,
+                              FILE       *code_file,
+                              const char *file_name) {
+    program_header_t header = {};
+
+    if(fread(&header, 1, sizeof(program_header_t), code_file) != sizeof(program_header_t)) {
+        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                     "Error while reading code from file '%s'.\r\n",
+                     file_name);
+        return SPU_READING_ERROR;
+    }
+
+    if(strcmp(header.assembler_name, assembler_name) != 0) {
+        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                     "Program '%s' was compiled with assembler '%s',\r\n"
+                     "This processor supports assembler '%s'.\r\n",
+                     file_name,
+                     header.assembler_name,
+                     assembler_name);
+        return SPU_WRONG_ASSEMBLER;
+    }
+
+    if(header.assembler_version != assembler_version) {
+        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                     "This program was compiled with assembler version %llu\r\n"
+                     "And processor supports only %llu.\r\n",
+                     header.assembler_version,
+                     assembler_version);
+        return SPU_WRONG_VERSION;
+    }
+
+    spu->code_size = header.code_size;
+    return SPU_SUCCESS;
+}
+
+/**
+======================================================================================================
+    @brief      Reads code array.
+
+    @details    Reads code. It is expected that read_file_header(...) called before
+                and ile size is set to correct value.
+
+    @param [in] spu                 SPU structure
+    @param [in] code_file           Binary file to run
+    @param [in] file_name           Name of binary file
+
+    @return Error code
+
+======================================================================================================
+*/
+spu_error_t read_file_code(spu_t      *spu,
+                           FILE       *code_file,
+                           const char *file_name) {
+    spu->code = (uint64_t *)_calloc(spu->code_size, sizeof(uint64_t));
+    if(spu->code == NULL) {
+        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                     "Error while allocating memory to code array.\r\n");
+        fclose(code_file);
+        return SPU_MEMORY_ERROR;
+    }
+
+    if(fread(spu->code, sizeof(uint64_t), spu->code_size, code_file) != spu->code_size) {
+        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                     "Error while reading code from file '%s'.\r\n",
+                     file_name);
+        fclose(code_file);
+        _free(spu->code);
+        return SPU_READING_ERROR;
+    }
+    return SPU_SUCCESS;
 }
