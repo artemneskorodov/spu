@@ -39,8 +39,8 @@ static const uint32_t random_access_memory_mask = 0b100;
 static const char    *assembler_name            = "CHTO ZA MASHINA ETOT PROCESSOR";
 static const uint32_t assembler_version         = 1;
 static const size_t   assembler_name_size       = 64;
-static const size_t   spu_drawing_width         = 10;
-static const size_t   spu_drawing_height        = 10;
+static const size_t   spu_drawing_width         = 96;
+static const size_t   spu_drawing_height        = 36;
 
 struct program_header_t {
     char     assembler_name[assembler_name_size];
