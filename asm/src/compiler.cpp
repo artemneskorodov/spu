@@ -174,7 +174,7 @@ asm_error_t read_command(code_t *code,
 */
 asm_error_t parse_command(code_t *code, char *command) {
     command_t operation_code = get_command_value(command);
-    if(operation_code == CMD_UNKNOWN) {
+    if(operation_code == CMD_unknown) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "Unknown command '%s' %s:%llu.\r\n",
                      command,
@@ -235,18 +235,18 @@ asm_error_t code_move_next_line(code_t *code) {
 ======================================================================================================
 */
 asm_error_t parse_command_arguments(code_t *code, command_t operation_code) {
-    if(operation_code == CMD_PUSH ||
-       operation_code == CMD_POP)
+    if(operation_code == CMD_push ||
+       operation_code == CMD_pop)
         return parse_push_pop_arguments(code);
 
-    if(operation_code == CMD_CALL ||
-       operation_code == CMD_JMP  ||
-       operation_code == CMD_JA   ||
-       operation_code == CMD_JB   ||
-       operation_code == CMD_JAE  ||
-       operation_code == CMD_JBE  ||
-       operation_code == CMD_JE   ||
-       operation_code == CMD_JNE)
+    if(operation_code == CMD_call ||
+       operation_code == CMD_jmp  ||
+       operation_code == CMD_ja   ||
+       operation_code == CMD_jb   ||
+       operation_code == CMD_jae  ||
+       operation_code == CMD_jbe  ||
+       operation_code == CMD_je   ||
+       operation_code == CMD_jne)
         return parse_call_jmp_arguments(code);
 
     return ASM_SUCCESS;
@@ -395,13 +395,13 @@ size_t get_register_number(const char *register_name) {
 ======================================================================================================
 */
 command_t get_command_value(const char *command_name) {
-    C_ASSERT(command_name != NULL, return CMD_UNKNOWN);
+    C_ASSERT(command_name != NULL, return CMD_unknown);
 
     size_t commands_number = sizeof(supported_commands) / sizeof(supported_commands[0]);
     for(size_t index = 0; index < commands_number; index++)
         if(strcmp(command_name, supported_commands[index].command_name) == 0)
             return supported_commands[index].command_value;
-    return CMD_UNKNOWN;
+    return CMD_unknown;
 }
 
 /**

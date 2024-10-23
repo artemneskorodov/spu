@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include <windows.h>
 
 #include "spu_facilities.h"
 #include "spu_commands.h"
@@ -747,7 +748,7 @@ uint64_t *get_args_push_pop(spu_t *spu) {
     }
 
     else{
-        if(operation_code == CMD_POP) {
+        if(operation_code == CMD_pop) {
             size_t register_number = *(size_t *)(spu->code + spu->instruction_pointer);
             spu->instruction_pointer++;
             return (uint64_t *)(spu->registers + register_number - 1);
