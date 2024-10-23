@@ -296,6 +296,12 @@ asm_error_t parse_call_jmp_arguments(code_t *code) {
 
         return ASM_SUCCESS;
     }
+
+    color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                 "Unexpected parameter on %s:%llu\r\n",
+                 code->input_filename,
+                 code->source_current_line);
+    return ASM_UNEXPECTED_PARAMETER;
 }
 
 /**

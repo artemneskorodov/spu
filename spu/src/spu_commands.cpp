@@ -1,5 +1,6 @@
 #include <math.h>
 #include <stdio.h>
+#include <windows.h>
 
 #include "spu_facilities.h"
 #include "spu_commands.h"

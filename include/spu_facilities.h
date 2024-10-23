@@ -30,6 +30,8 @@ enum command_t : uint32_t {
     CMD_DRAW    = 0x17,
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
 static const char    *spu_register_names[]      = {"ax", "bx", "cx", "sp",
                                                    "bp", "di", "si", "dx"};
 static const size_t   registers_number          = 4;
@@ -41,6 +43,7 @@ static const uint32_t assembler_version         = 1;
 static const size_t   assembler_name_size       = 64;
 static const size_t   spu_drawing_width         = 96;
 static const size_t   spu_drawing_height        = 36;
+#pragma GCC diagnostic pop
 
 struct program_header_t {
     char     assembler_name[assembler_name_size];

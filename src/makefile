@@ -5,7 +5,13 @@ OBJECTS:=$(addsuffix .o,$(addprefix ${BINDIR}\,$(basename ${SOURCE})))
 
 all: ${OBJECTS}
 
-${OBJECTS}: ${SOURCE}
+${OBJECTS}: ${SOURCE} ${BINDIR}
 	$(foreach SRC,${SOURCE}, $(shell g++ -c ${FLAGS} ${SRC} -o $(addsuffix .o,$(addprefix ${BINDIR}/,$(basename ${SRC})))))
+${SOURCE}:
+
+${BINDIR}:
+	md ${BINDIR}
+
 clean:
 	$(foreach OBJ,${OBJECTS}, $(shell del ${OBJ}))
+	rd ${BINDIR}

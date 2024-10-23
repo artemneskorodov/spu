@@ -11,9 +11,13 @@ all: ${OUTPUT}
 
 ${OUTPUT}:${OBJECTS}
 	g++ ${FLAGS} ${OBJECTS} ${LINKED} -o ../${OUTPUT}
-${OBJECTS}: ${SOURCE}
-	$(foreach SRC,${SOURCE},$(shell g++ -c ${SRC} ${LINKED} ${FLAGS} -o $(addsuffix .o,$(addprefix ${BINDIR}\,$(notdir $(basename ${SRC}))))))
+${OBJECTS}: ${SOURCE} ${BINDIR}
+	$(foreach SRC,${SOURCE},$(shell g++ -c ${SRC} ${FLAGS} -o $(addsuffix .o,$(addprefix ${BINDIR}\,$(notdir $(basename ${SRC}))))))
 clean:
 	$(foreach OBJ,${OBJECTS}, $(shell del ${OBJ}))
 	del ..\${OUTPUT}
+	rd ${BINDIR}
 ${SOURCE}:
+
+${BINDIR}:
+	md ${BINDIR}
