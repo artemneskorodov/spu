@@ -210,6 +210,11 @@ asm_error_t code_move_next_line(code_t *code) {
     while(code->source_code[code->source_code_position] != '\n')
         code->source_code_position++;
 
+    if(code->source_code[code->source_code_position + 1] == '\0') {
+        code->source_code_position++;
+        return ASM_SUCCESS;
+    }
+
     while(!isprint(code->source_code[code->source_code_position]))
         code->source_code_position++;
 

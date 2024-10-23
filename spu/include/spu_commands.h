@@ -24,7 +24,7 @@ enum spu_error_t {
 
 typedef double argument_t;
 
-static const size_t random_access_memory_size = 100;
+static const size_t random_access_memory_size = 16384;
 
 struct spu_t {
     stack_t       *stack;
@@ -32,7 +32,7 @@ struct spu_t {
     size_t         code_size;
     size_t         instruction_pointer;
     argument_t     registers[registers_number];
-    argument_t     random_access_memory[random_access_memory_size];
+    argument_t    *random_access_memory;
     argument_t     push_register;
 };
 

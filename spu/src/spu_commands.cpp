@@ -786,17 +786,22 @@ uint64_t *get_args_push_pop(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_draw (spu_t *spu) {
+    char buffer[spu_drawing_height * (spu_drawing_width + 1) + 1] = {};
+    size_t buffer_index = 0;
     for(size_t h = 0; h < spu_drawing_height; h++) {
         for(size_t w = 0; w < spu_drawing_width; w++) {
             uint64_t memory_element = *(uint64_t *)(spu->random_access_memory + h * spu_drawing_width + w);
             if(memory_element == 0)
-                printf(". ");
+                buffer[buffer_index++] = '.';
 
             else
-                printf("* ");
+                buffer[buffer_index++] = '*';
         }
-        printf("\r\n");
+        buffer[buffer_index++] = '\n';
     }
 
+    Sleep(30);
+    system("cls");
+    fputs(buffer, stderr);
     return SPU_SUCCESS;
 }

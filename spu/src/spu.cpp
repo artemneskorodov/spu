@@ -100,6 +100,13 @@ spu_error_t init_spu_code(spu_t      *spu,
 
     fclose(code_file);
 
+    spu->random_access_memory = (argument_t *)_calloc(random_access_memory_size, sizeof(argument_t));
+    if(spu->random_access_memory == NULL) {
+        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                     "Error while allocating RAM.\r\n");
+        return SPU_MEMORY_ERROR;
+    }
+
     spu->instruction_pointer = 0;
     spu->stack = stack_init(DUMP_INIT("stack.log",
                                       spu->stack,
