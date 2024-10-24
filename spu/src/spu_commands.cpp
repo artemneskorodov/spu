@@ -7,10 +7,15 @@
 #include "colors.h"
 #include "utils.h"
 
-static argument_t  *get_args_push_pop    (spu_t *spu);
-static spu_error_t  write_code_dump      (spu_t *spu);
-static spu_error_t  write_registers_dump (spu_t *spu);
-static spu_error_t  write_ram_dump       (spu_t *spu);
+static argument_t  *get_args_push_pop    (spu_t          *spu);
+static spu_error_t  write_code_dump      (spu_t          *spu);
+static spu_error_t  write_registers_dump (spu_t          *spu);
+static spu_error_t  write_ram_dump       (spu_t          *spu);
+static argument_t  *get_pop_argument     (spu_t          *spu);
+static argument_t  *get_memory_address   (spu_t          *spu,
+                                          argument_type_t argument_type);
+static argument_t  *get_push_argument    (spu_t          *spu,
+                                          argument_type_t argument_type);
 
 /**
 ======================================================================================================
@@ -698,18 +703,6 @@ spu_error_t run_command_ret (spu_t *spu) {
     return SPU_SUCCESS;
 }
 
-//         ___________________________________________________________________
-//        | dx       |    push(val(dx))          |    pop(&dx)                | return address of dx
-//        |__________|___________________________|____________________________|
-//        | dx + 5   |    push(val(dx) + 5)      |    none                    | return address of push register and add values there
-//        |__________|___________________________|____________________________|
-//        | [dx + 5] |    push(ram[val(dx) + 5]) |    pop(&ram[val(dx) + 5])  | return address of ram
-//        |__________|___________________________|____________________________|
-//        | [dx]     |    push(ram[val(dx)])     |    pop(&ram[val(dx)])      | return address of ram
-//        |__________|___________________________|____________________________|
-//        | 5        |    push(5)                |    none                    | return address of push register and add values there
-//        |__________|___________________________|____________________________|
-
 /**
 ======================================================================================================
     @brief      Reads arguments to push and pop
@@ -729,54 +722,109 @@ argument_t *get_args_push_pop(spu_t *spu) {
     command_t      *code_pointer   = (command_t *)(spu->code +
                                                    spu->instruction_pointer - 1);
     command_t       operation_code = code_pointer[1];
-    argument_type_t argument_type  = (argument_type_t)code_pointer[0];
+    argument_type_t argument_type  = *(argument_type_t *)code_pointer;
 
-    if(argument_type & random_access_memory_mask) {
-        address_t ram_address = 0;
+    if(argument_type & random_access_memory_mask)
+        return get_memory_address(spu, argument_type);
 
-        if(argument_type & immediate_constant_mask) {
-            ram_address += *(address_t *)(spu->code +
-                                          spu->instruction_pointer);
-            spu->instruction_pointer++;
-        }
+    if(operation_code == CMD_POP)
+        return get_pop_argument(spu);
 
-        if(argument_type & register_parameter_mask) {
-            address_t register_number = *(address_t *)(spu->code +
-                                                       spu->instruction_pointer);
-            spu->instruction_pointer++;
-            ram_address += (address_t)spu->registers[register_number - 1];
-        }
+    return get_push_argument(spu, argument_type);
+}
 
-        return spu->random_access_memory + ram_address;
+/**
+======================================================================================================
+    @brief      Reads arguments to pop
+
+    @details    It is expected that it is already checked that pop argument
+                is not a RAM address.
+                Function reads only register parameter.
+
+    @param [in] spu                 SPU structure
+
+    @return Pointer to element where to pop, or from where to push.
+
+======================================================================================================
+*/
+argument_t *get_pop_argument(spu_t *spu) {
+    address_t register_number = *(address_t *)(spu->code +
+                                               spu->instruction_pointer);
+    spu->instruction_pointer++;
+    return spu->registers + register_number - 1;
+}
+
+/**
+======================================================================================================
+    @brief      Reads arguments to push
+
+    @details    It is expected that it is already checked that push argument
+                is not a RAM address.
+                If constant occurs, function reads it as argument_t value (double).
+                Registers are treated as their values.
+                Function puts values in push register of SPU and returns its pointer.
+
+    @param [in] spu                 SPU structure
+    @param [in] argument_type       Integers with flags set on types of arguments.
+
+    @return Pointer to element where to pop, or from where to push.
+
+======================================================================================================
+*/
+argument_t *get_push_argument(spu_t          *spu,
+                              argument_type_t argument_type) {
+    spu->push_register = 0;
+
+    if(argument_type & immediate_constant_mask) {
+        spu->push_register += *(argument_t *)(spu->code +
+                                              spu->instruction_pointer);
+        spu->instruction_pointer++;
     }
 
-    else{
-        if(operation_code == CMD_POP) {
-            address_t register_number = *(address_t *)(spu->code +
-                                                       spu->instruction_pointer);
-            spu->instruction_pointer++;
-            return spu->registers + register_number - 1;
-        }
-
-        else {
-            spu->push_register = 0;
-
-            if(argument_type & immediate_constant_mask) {
-                spu->push_register += *(argument_t *)(spu->code +
-                                                      spu->instruction_pointer);
-                spu->instruction_pointer++;
-            }
-
-            if(argument_type & register_parameter_mask) {
-                address_t register_number = *(address_t *)(spu->code +
-                                                           spu->instruction_pointer);
-                spu->instruction_pointer++;
-                spu->push_register += spu->registers[register_number - 1];
-            }
-
-            return &spu->push_register;
-        }
+    if(argument_type & register_parameter_mask) {
+        address_t register_number = *(address_t *)(spu->code +
+                                                   spu->instruction_pointer);
+        spu->instruction_pointer++;
+        spu->push_register += spu->registers[register_number - 1];
     }
+
+    return &spu->push_register;
+}
+
+/**
+======================================================================================================
+    @brief      Reads arguments to push and pop in memory
+
+    @details    It is expected that it is checked that argument type mask of RAM is on.
+                Function treat constants as address_t (uint64_t).
+                Values in registers are casted to address_t.
+                Function returns pointer to RAM cell.
+
+    @param [in] spu                 SPU structure
+    @param [in] argument_type       Integers with flags set on types of arguments.
+
+    @return Pointer to element where to pop, or from where to push.
+
+======================================================================================================
+*/
+argument_t *get_memory_address(spu_t          *spu,
+                               argument_type_t argument_type) {
+    address_t ram_address = 0;
+
+    if(argument_type & immediate_constant_mask) {
+        ram_address += *(address_t *)(spu->code +
+                                      spu->instruction_pointer);
+        spu->instruction_pointer++;
+    }
+
+    if(argument_type & register_parameter_mask) {
+        address_t register_number = *(address_t *)(spu->code +
+                                                   spu->instruction_pointer);
+        spu->instruction_pointer++;
+        ram_address += (address_t)spu->registers[register_number - 1];
+    }
+
+    return spu->random_access_memory + ram_address;
 }
 
 /**
