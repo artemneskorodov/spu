@@ -18,6 +18,9 @@
 */
 static const size_t stack_init_size = 16;
 
+//====================================================================================================
+//FUNCTIONS PROTOTYPES
+//====================================================================================================
 static spu_error_t init_spu_code    (spu_t      *spu,
                                      const char *file_name);
 static spu_error_t run_spu_code     (spu_t      *spu);
@@ -138,7 +141,7 @@ spu_error_t init_spu_code(spu_t      *spu,
 
     @return Error code
 
-    @todo Add checking that instruction_pointer is less then code_size
+    @todo Add checking that instruction_pointer is less then code size
 
 ======================================================================================================
 */
@@ -181,6 +184,7 @@ spu_error_t run_spu_code(spu_t *spu) {
 */
 spu_error_t destroy_spu_code(spu_t *spu) {
     _free(spu->code);
+    _free(spu->random_access_memory);
     stack_destroy(&spu->stack);
     memset(spu, 0, sizeof(spu_t));
     _memory_destroy_log();

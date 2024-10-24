@@ -12,11 +12,3 @@ size_t file_size(FILE *file) {
 int file_print_double(FILE *output, void *item) {
     return fprintf(output, "%lg", *(double *)item);
 }
-
-bool is_equal_double(double first, double second) {
-    const double epsilon = 10e-9;
-    if(fabs(first - second) < epsilon)
-        return true;
-
-    return false;
-}

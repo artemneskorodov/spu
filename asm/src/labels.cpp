@@ -25,6 +25,9 @@ static const size_t labels_init_size    = 32;
 */
 static const size_t fixups_init_size    = 32;
 
+//====================================================================================================
+//FUNCTIONS PROTOTYPES
+//====================================================================================================
 static asm_error_t try_find_label    (labels_array_t *labels_array,
                                       char           *label_name,
                                       code_element_t *code_label_pointer);

@@ -12,8 +12,17 @@
 #include "asm.h"
 #include "compiler.h"
 
+/**
+======================================================================================================
+     @brief     Default name of output binary file.
+
+======================================================================================================
+*/
 static const char *default_output_filename = "a.bin";
 
+//====================================================================================================
+//FUNCTIONS PROTOTYPES
+//====================================================================================================
 static asm_error_t parse_flags      (code_t     *code,
                                      int         argc,
                                      const char *argv[]);
@@ -23,12 +32,37 @@ static asm_error_t destroy_code     (code_t     *code);
 static asm_error_t write_header     (code_t     *code,
                                      FILE       *output_file);
 
+/**
+======================================================================================================
+    @brief      Runs assembler.
+
+    @details    Parses flags, reads source file, compiles code and writes it to
+                the default output file, or in file with name from console input
+                while using '-o' flag.
+
+    @param [in] argc                Number of arguments typed in by user.
+    @param [in] argv                Arguments from console.
+
+    @return Exit code.
+
+======================================================================================================
+*/
 int main(int argc, const char *argv[]) {
     code_t code = {};
-    if(parse_flags     (&code, argc, argv) != ASM_SUCCESS ||
-       read_source_code(&code)             != ASM_SUCCESS ||
-       compile_code    (&code)             != ASM_SUCCESS ||
-       write_code      (&code)             != ASM_SUCCESS) {
+    asm_error_t error_code = ASM_SUCCESS;
+    if((error_code = parse_flags     (&code, argc, argv)) != ASM_SUCCESS) {
+        destroy_code(&code);
+        return EXIT_FAILURE;
+    }
+    if((error_code = read_source_code(&code)            ) != ASM_SUCCESS) {
+        destroy_code(&code);
+        return EXIT_FAILURE;
+    }
+    if((error_code = compile_code    (&code)            ) != ASM_SUCCESS) {
+        destroy_code(&code);
+        return EXIT_FAILURE;
+    }
+    if((error_code = write_code      (&code)            ) != ASM_SUCCESS) {
         destroy_code(&code);
         return EXIT_FAILURE;
     }

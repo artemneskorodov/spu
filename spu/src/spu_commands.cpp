@@ -7,15 +7,49 @@
 #include "colors.h"
 #include "utils.h"
 
+//====================================================================================================
+//FUNCTIONS PROTOTYPES
+//====================================================================================================
 static argument_t  *get_args_push_pop    (spu_t          *spu);
 static spu_error_t  write_code_dump      (spu_t          *spu);
 static spu_error_t  write_registers_dump (spu_t          *spu);
 static spu_error_t  write_ram_dump       (spu_t          *spu);
+static spu_error_t  pop_two_elements     (spu_t          *spu,
+                                          argument_t     *first,
+                                          argument_t     *second);
 static argument_t  *get_pop_argument     (spu_t          *spu);
 static argument_t  *get_memory_address   (spu_t          *spu,
                                           argument_type_t argument_type);
 static argument_t  *get_push_argument    (spu_t          *spu,
                                           argument_type_t argument_type);
+static bool         is_below             (argument_t      first,
+                                          argument_t      second);
+static bool         is_below_or_equal    (argument_t      first,
+                                          argument_t      second);
+static bool         is_above             (argument_t      first,
+                                          argument_t      second);
+static bool         is_above_or_equal    (argument_t      first,
+                                          argument_t      second);
+static bool         is_equal             (argument_t      first,
+                                          argument_t      second);
+static bool         is_not_equal         (argument_t      first,
+                                          argument_t      second);
+static argument_t   add_values           (argument_t      first,
+                                          argument_t      second);
+static argument_t   sub_values           (argument_t      first,
+                                          argument_t      second);
+static argument_t   mul_values           (argument_t      first,
+                                          argument_t      second);
+static argument_t   div_values           (argument_t      first,
+                                          argument_t      second);
+static spu_error_t  jump_with_condition  (spu_t          *spu,
+                                          bool          (*comparator) (argument_t first,
+                                                                       argument_t second));
+static spu_error_t  calculate_for_two    (spu_t           *spu,
+                                          argument_t     (*function)  (argument_t first,
+                                                                       argument_t second));
+static spu_error_t calculate_for_one     (spu_t           *spu,
+                                          argument_t     (*function)  (argument_t item));
 
 /**
 ======================================================================================================
@@ -52,17 +86,7 @@ spu_error_t run_command_push(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_add(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    argument_t result = first_item + second_item;
-    if(stack_push(&spu->stack, &result) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    return SPU_SUCCESS;
+    return calculate_for_two(spu, add_values);
 }
 
 /**
@@ -79,17 +103,7 @@ spu_error_t run_command_add(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_sub(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    argument_t result = second_item - first_item;
-    if(stack_push(&spu->stack, &result) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    return SPU_SUCCESS;
+    return calculate_for_two(spu, sub_values);
 }
 
 /**
@@ -105,17 +119,7 @@ spu_error_t run_command_sub(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_mul(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    argument_t result = first_item * second_item;
-    if(stack_push(&spu->stack, &result) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    return SPU_SUCCESS;
+    return calculate_for_two(spu, mul_values);
 }
 
 /**
@@ -132,17 +136,7 @@ spu_error_t run_command_mul(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_div(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    argument_t result = second_item / first_item;
-    if(stack_push(&spu->stack, &result) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    return SPU_SUCCESS;
+    return calculate_for_two(spu, div_values);
 }
 
 /**
@@ -210,15 +204,7 @@ spu_error_t run_command_in(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_sqrt(spu_t *spu) {
-    argument_t item = 0;
-    if(stack_pop (&spu->stack, &item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    item = sqrt(item);
-    if(stack_push(&spu->stack, &item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    return SPU_SUCCESS;
+    return calculate_for_one(spu, sqrt);
 }
 
 /**
@@ -234,15 +220,7 @@ spu_error_t run_command_sqrt(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_sin(spu_t *spu) {
-    argument_t item = 0;
-    if(stack_pop (&spu->stack, &item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    item = sin(item);
-    if(stack_push(&spu->stack, &item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    return SPU_SUCCESS;
+    return calculate_for_one(spu, sin);
 }
 
 /**
@@ -258,15 +236,7 @@ spu_error_t run_command_sin(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_cos(spu_t *spu) {
-    argument_t item = 0;
-    if(stack_pop (&spu->stack, &item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    item = cos(item);
-    if(stack_push(&spu->stack, &item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    return SPU_SUCCESS;
+    return calculate_for_one(spu, cos);
 }
 
 /**
@@ -484,18 +454,7 @@ spu_error_t run_command_jmp(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_ja(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    if(first_item < second_item)
-        return run_command_jmp(spu);
-
-    spu->instruction_pointer++;
-    return SPU_SUCCESS;
+    return jump_with_condition(spu, is_above);
 }
 
 /**
@@ -512,18 +471,7 @@ spu_error_t run_command_ja(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_jb(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    if(first_item > second_item)
-        return run_command_jmp(spu);
-
-    spu->instruction_pointer++;
-    return SPU_SUCCESS;
+    return jump_with_condition(spu, is_below);
 }
 
 /**
@@ -540,18 +488,7 @@ spu_error_t run_command_jb(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_jae(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    if(first_item <= second_item)
-        return run_command_jmp(spu);
-
-    spu->instruction_pointer++;
-    return SPU_SUCCESS;
+    return jump_with_condition(spu, is_above_or_equal);
 }
 
 /**
@@ -568,18 +505,7 @@ spu_error_t run_command_jae(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_jbe(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    if(first_item >= second_item)
-        return run_command_jmp(spu);
-
-    spu->instruction_pointer++;
-    return SPU_SUCCESS;
+    return jump_with_condition(spu, is_below_or_equal);
 }
 
 /**
@@ -596,18 +522,7 @@ spu_error_t run_command_jbe(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_je(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    if(is_equal_double(first_item, second_item))
-        return run_command_jmp(spu);
-
-    spu->instruction_pointer++;
-    return SPU_SUCCESS;
+    return jump_with_condition(spu, is_equal);
 }
 
 /**
@@ -624,18 +539,7 @@ spu_error_t run_command_je(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_jne(spu_t *spu) {
-    argument_t first_item  = 0,
-               second_item = 0;
-
-    if(stack_pop(&spu->stack, &first_item ) != STACK_SUCCESS ||
-       stack_pop(&spu->stack, &second_item) != STACK_SUCCESS)
-        return SPU_STACK_ERROR;
-
-    if(!is_equal_double(first_item, second_item))
-        return run_command_jmp(spu);
-
-    spu->instruction_pointer++;
-    return SPU_SUCCESS;
+    return jump_with_condition(spu, is_not_equal);
 }
 
 /**
@@ -674,9 +578,8 @@ spu_error_t run_command_pop(spu_t *spu) {
 */
 spu_error_t run_command_call(spu_t *spu) {
     size_t return_pointer = spu->instruction_pointer + 1;
-    if(stack_push(&spu->stack, &return_pointer) != STACK_SUCCESS) {
+    if(stack_push(&spu->stack, &return_pointer) != STACK_SUCCESS)
         return SPU_STACK_ERROR;
-    }
 
     spu->instruction_pointer = (size_t)spu->code[spu->instruction_pointer];
     return SPU_SUCCESS;
@@ -840,7 +743,7 @@ argument_t *get_memory_address(spu_t          *spu,
 
 ======================================================================================================
 */
-spu_error_t run_command_draw (spu_t *spu) {
+spu_error_t run_command_draw(spu_t *spu) {
     char buffer[spu_drawing_height * (spu_drawing_width + 1) + 1] = {};
     size_t buffer_index = 0;
     for(size_t h = 0; h < spu_drawing_height; h++) {
@@ -924,6 +827,7 @@ spu_error_t run_command_chai(spu_t */*spu*/) {
                                ".......................................................................................\r\n";
 
     const size_t chai_cycles = 1024;
+
     for(size_t frame = 0; frame < chai_cycles; frame++) {
         system("cls");
         if(frame % 2 == 0)
@@ -932,5 +836,290 @@ spu_error_t run_command_chai(spu_t */*spu*/) {
             fputs(second_frame, stderr);
         Sleep(50);
     }
+
+    return SPU_SUCCESS;
+}
+
+/**
+======================================================================================================
+    @brief      Pops two elements from SPU stack and writes them to first and second.
+
+    @details    First is the number of pop, so it will contain the last element in stack.
+
+    @param [in] spu                 SPU structure
+    @param [in] first               Pointer to storage for first pop.
+    @param [in] second              Pointer to storage for second pop.
+
+    @return Error code
+
+======================================================================================================
+*/
+spu_error_t pop_two_elements(spu_t      *spu,
+                             argument_t *first,
+                             argument_t *second) {
+    if(stack_pop(&spu->stack, first ) != STACK_SUCCESS)
+        return SPU_STACK_ERROR;
+
+    if(stack_pop(&spu->stack, second) != STACK_SUCCESS)
+        return SPU_STACK_ERROR;
+
+    return SPU_SUCCESS;
+}
+
+/**
+======================================================================================================
+    @brief      Pushes function result to stack.
+
+    @details    Pops two elements from stack and passes them in function given by caller.
+                First argument in called function will be the result of first pop.
+                Function result is pushed in SPU stack.
+
+    @param [in] spu                 SPU structure
+    @param [in] function            Function which will be the result of command.
+
+    @return Error code
+
+======================================================================================================
+*/
+spu_error_t calculate_for_two(spu_t        *spu,
+                              argument_t  (*function)(argument_t first,
+                                                      argument_t second)) {
+    argument_t first_item  = 0,
+               second_item = 0;
+
+    if(pop_two_elements(spu, &first_item, &second_item) != SPU_SUCCESS)
+        return SPU_STACK_ERROR;
+
+    argument_t result = function(first_item, second_item);
+    if(stack_push(&spu->stack, &result) != STACK_SUCCESS)
+        return SPU_STACK_ERROR;
+
+    return SPU_SUCCESS;
+}
+
+/**
+======================================================================================================
+    @brief      Jumps with condition.
+
+    @details    Pops two elements from stack and passes them in comparator.
+                The first argument in comparator will be the result of first pop.
+                If comparator returns true, function calls run_command_jmp.
+                Else it moves instruction pointer to next command.
+
+    @param [in] spu                 SPU structure
+    @param [in] comparator          Function which compare to elements.
+
+    @return Error code
+
+======================================================================================================
+*/
+spu_error_t jump_with_condition(spu_t  *spu,
+                                bool  (*comparator)(argument_t first,
+                                                    argument_t second)) {
+    argument_t first_item  = 0,
+               second_item = 0;
+
+    if(pop_two_elements(spu, &first_item, &second_item) != SPU_SUCCESS)
+        return SPU_STACK_ERROR;
+
+    if(comparator(first_item, second_item)) {
+        return run_command_jmp(spu);
+    }
+
+    spu->instruction_pointer++;
+    return SPU_SUCCESS;
+}
+
+/**
+======================================================================================================
+    @brief      Adds first and second.
+
+    @param [in] first               First value to add.
+    @param [in] second              Second value to add.
+
+    @return Result of summation
+
+======================================================================================================
+*/
+argument_t add_values(argument_t first, argument_t second) {
+    return second + first;
+}
+
+/**
+======================================================================================================
+    @brief      Subtracts first from second.
+
+    @param [in] first               First value to subtract.
+    @param [in] second              Second value to subtract.
+
+    @return Result of subtraction
+
+======================================================================================================
+*/
+argument_t sub_values(argument_t first, argument_t second) {
+    return second - first;
+}
+
+/**
+======================================================================================================
+    @brief      Multiplies first and second.
+
+    @param [in] first               First value to multiply.
+    @param [in] second              Second value to multiply.
+
+    @return Product of first and second.
+
+======================================================================================================
+*/
+argument_t mul_values(argument_t first, argument_t second) {
+    return second * first;
+}
+
+/**
+======================================================================================================
+    @brief      Divides second value by first.
+
+    @param [in] first               First value to divide.
+    @param [in] second              Second value to divide.
+
+    @return Result of division
+
+======================================================================================================
+*/
+argument_t div_values(argument_t first, argument_t second) {
+    return second / first;
+}
+
+/**
+======================================================================================================
+    @brief      Checks if second value is less than first.
+
+    @param [in] first               First value to compare.
+    @param [in] second              Second value to compare.
+
+    @return True if second is less than first
+
+======================================================================================================
+*/
+bool is_below(argument_t first, argument_t second) {
+    if(second < first)
+        return true;
+
+    return false;
+}
+
+/**
+======================================================================================================
+    @brief      Checks if second value is less than or equal to first.
+
+    @param [in] first               First value to compare.
+    @param [in] second              Second value to compare.
+
+    @return True if second is less than or equal to first
+
+======================================================================================================
+*/
+bool is_below_or_equal(argument_t first, argument_t second) {
+    if(second < first || is_equal(first, second))
+        return true;
+
+    return false;
+}
+
+/**
+======================================================================================================
+    @brief      Checks if second value is bigger than first.
+
+    @param [in] first               First value to compare.
+    @param [in] second              Second value to compare.
+
+    @return True if second is bigger than first
+
+======================================================================================================
+*/
+bool is_above(argument_t first, argument_t second) {
+    if(second > first)
+        return true;
+
+    return false;
+}
+
+/**
+======================================================================================================
+    @brief      Checks if second value is bigger than or equal to first.
+
+    @param [in] first               First value to compare.
+    @param [in] second              Second value to compare.
+
+    @return True if second is bigger than or equal to first
+
+======================================================================================================
+*/
+bool is_above_or_equal(argument_t first, argument_t second) {
+    if(second > first || is_equal(first, second))
+        return true;
+
+    return false;
+}
+
+/**
+======================================================================================================
+    @brief      Checks if second value is equal to first.
+
+    @param [in] first               First value to compare.
+    @param [in] second              Second value to compare.
+
+    @return True if second is equal to first
+
+======================================================================================================
+*/
+bool is_equal(argument_t first, argument_t second) {
+    const argument_t epsilon = 10e-6;
+
+    if(fabs(first - second) < epsilon)
+        return true;
+
+    return false;
+}
+
+/**
+======================================================================================================
+    @brief      Checks if second value is not equal first.
+
+    @param [in] first               First value to compare.
+    @param [in] second              Second value to compare.
+
+    @return True if second is not equal first
+
+======================================================================================================
+*/
+bool is_not_equal(argument_t first, argument_t second) {
+    return !is_equal(first, second);
+}
+
+/**
+======================================================================================================
+    @brief      Pushes function result to stack.
+
+    @details    Pops one element from stack and passes it to function given by caller.
+                Function result is pushed to SPU stack.
+
+    @param [in] spu                 SPU structure
+    @param [in] function            Function which will be the result of command.
+
+    @return Error code
+
+======================================================================================================
+*/
+static spu_error_t calculate_for_one     (spu_t           *spu,
+                                          argument_t     (*function)  (argument_t item)) {
+    argument_t item = 0;
+    if(stack_pop(&spu->stack, &item) != STACK_SUCCESS)
+        return SPU_STACK_ERROR;
+
+    argument_t result = function(item);
+    if(stack_push(&spu->stack, &result) != STACK_SUCCESS)
+        return SPU_STACK_ERROR;
+
     return SPU_SUCCESS;
 }

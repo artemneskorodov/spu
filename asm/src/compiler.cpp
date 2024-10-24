@@ -7,8 +7,17 @@
 #include "custom_assert.h"
 #include "colors.h"
 
+/**
+======================================================================================================
+     @brief     It is expected that all commands in source code wont exceed this size.
+
+======================================================================================================
+*/
 static const size_t max_command_length = 32;
 
+//====================================================================================================
+//FUNCTIONS PROTOTYPES
+//====================================================================================================
 static asm_error_t allocate_code_memory     (code_t     *code);
 static asm_error_t parse_line               (code_t     *code);
 static asm_error_t read_command             (code_t     *code,

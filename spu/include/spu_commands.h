@@ -8,18 +8,18 @@
 #include "spu_facilities.h"
 
 enum spu_error_t {
-    SPU_SUCCESS            = 0 ,
-    SPU_EXIT_SUCCESS       = 1 ,
-    SPU_STACK_ERROR        = 2 ,
-    SPU_CODE_SIZE_ERROR    = 3 ,
-    SPU_NULL_POINTER       = 4 ,
-    SPU_READING_ERROR      = 5 ,
-    SPU_MEMORY_ERROR       = 6 ,
-    SPU_UNKNOWN_COMMAND    = 7 ,
-    SPU_INPUT_ERROR        = 8 ,
-    SPU_REGISTER_ERROR     = 9 ,
-    SPU_WRONG_VERSION      = 10,
-    SPU_WRONG_ASSEMBLER    = 11,
+    SPU_SUCCESS         = 0 ,
+    SPU_EXIT_SUCCESS    = 1 ,
+    SPU_STACK_ERROR     = 2 ,
+    SPU_CODE_SIZE_ERROR = 3 ,
+    SPU_NULL_POINTER    = 4 ,
+    SPU_READING_ERROR   = 5 ,
+    SPU_MEMORY_ERROR    = 6 ,
+    SPU_UNKNOWN_COMMAND = 7 ,
+    SPU_INPUT_ERROR     = 8 ,
+    SPU_REGISTER_ERROR  = 9 ,
+    SPU_WRONG_VERSION   = 10,
+    SPU_WRONG_ASSEMBLER = 11,
 };
 
 struct spu_t {
@@ -32,7 +32,7 @@ struct spu_t {
     argument_t      push_register;
 };
 
-spu_error_t run_command_chai(spu_t *spu);
+spu_error_t run_command_chai (spu_t *spu);
 spu_error_t run_command_push (spu_t *spu);
 spu_error_t run_command_add  (spu_t *spu);
 spu_error_t run_command_sub  (spu_t *spu);

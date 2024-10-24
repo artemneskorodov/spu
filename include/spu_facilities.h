@@ -38,6 +38,7 @@ enum command_t : uint32_t {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
+
 static const char           *spu_register_names[]      = {"ax", "bx", "cx", "sp",
                                                           "bp", "di", "si", "dx"};
 static const address_t       registers_number          = 4;
@@ -49,7 +50,8 @@ static const address_t       spu_drawing_height        = 36;
 static const char           *assembler_name            = "CHTO ZA MASHINA ETOT PROCESSOR";
 static const uint64_t        assembler_version         = 1;
 static const size_t          assembler_name_size       = 64;
-static const size_t          random_access_memory_size = 32768;
+static const size_t          random_access_memory_size = 16384;
+
 #pragma GCC diagnostic pop
 
 struct program_header_t {
