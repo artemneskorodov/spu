@@ -151,7 +151,6 @@ spu_error_t run_spu_code(spu_t *spu) {
     while(true) {
         spu_error_t error_code = run_command(spu);
         if(error_code != SPU_SUCCESS && error_code != SPU_EXIT_SUCCESS) {
-            spu->instruction_pointer--;
             color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                          "Error while running command '0x%llx'\r\n"
                          "on instruction pointer 0x%llx.\r\n"
@@ -204,11 +203,8 @@ spu_error_t destroy_spu_code(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command(spu_t *spu) {
-    command_t *code_pointer   = (command_t *)(spu->code +
-                                              spu->instruction_pointer);
-    spu->instruction_pointer++;
-    command_t  operation_code = code_pointer[1];
-
+    command_t operation_code = (command_t)(spu->code[spu->instruction_pointer++] &
+                                           operation_code_mask);
     switch(operation_code) {
         case CMD_PUSH:
             return run_command_push (spu);
@@ -332,7 +328,7 @@ spu_error_t read_file_header (spu_t      *spu,
 spu_error_t read_file_code(spu_t      *spu,
                            FILE       *code_file,
                            const char *file_name) {
-    spu->code = (code_element_t *)_calloc(spu->code_size, sizeof(code_element_t));
+    spu->code = (command_t *)_calloc(spu->code_size, sizeof(command_t));
     if(spu->code == NULL) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "Error while allocating memory to code array.\r\n");
@@ -340,7 +336,7 @@ spu_error_t read_file_code(spu_t      *spu,
         return SPU_MEMORY_ERROR;
     }
 
-    if(fread(spu->code, sizeof(uint64_t), spu->code_size, code_file) != spu->code_size) {
+    if(fread(spu->code, sizeof(command_t), spu->code_size, code_file) != spu->code_size) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "Error while reading code from file '%s'.\r\n",
                      file_name);

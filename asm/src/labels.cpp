@@ -30,12 +30,14 @@ static const size_t fixups_init_size    = 32;
 //====================================================================================================
 static asm_error_t try_find_label    (labels_array_t *labels_array,
                                       char           *label_name,
-                                      code_element_t *code_label_pointer);
+                                      command_t      *code_label_pointer);
 static asm_error_t add_fix_up        (labels_array_t *labels_array,
                                       size_t          label_number,
-                                      code_element_t *code_label_pointer);
+                                      command_t      *code_label_pointer);
 static asm_error_t check_labels_size (labels_array_t *labels_array);
 static asm_error_t check_fixup_size  (labels_array_t *labels_array);
+static asm_error_t paste_label_ip    (label_t        *label,
+                                      command_t      *code_pointer);
 
 /**
 ======================================================================================================
@@ -57,7 +59,7 @@ struct label_t {
 */
 struct fixup_t {
     size_t          label_number;
-    code_element_t *code_element;
+    command_t      *code_element;
 };
 
 /**
@@ -114,14 +116,18 @@ asm_error_t code_labels_init(labels_array_t *labels_array) {
 */
 asm_error_t try_find_label(labels_array_t *labels_array,
                            char           *label_name,
-                           code_element_t *code_label_pointer) {
+                           command_t      *code_label_pointer) {
     C_ASSERT(labels_array       != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(label_name         != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(code_label_pointer != NULL, return ASM_INPUT_ERROR);
     for(size_t index = 0; index < labels_array->labels_number; index++) {
-        if(strcmp(labels_array->labels[index].label_name, label_name) == 0) {
-            if(labels_array->labels[index].is_defined) {
-                *code_label_pointer = labels_array->labels[index].label_ip;
+        label_t *label = labels_array->labels + index;
+        if(strcmp(label->label_name, label_name) == 0) {
+            if(label->is_defined) {
+                asm_error_t error_code = paste_label_ip(label, code_label_pointer);
+                if(error_code != ASM_SUCCESS)
+                    return error_code;
+
                 return ASM_SUCCESS;
             }
             else {
@@ -155,7 +161,7 @@ asm_error_t try_find_label(labels_array_t *labels_array,
 */
 asm_error_t get_label_instruction_pointer(labels_array_t *labels_array,
                                           char           *label_name,
-                                          code_element_t *code_label_pointer) {
+                                          command_t      *code_label_pointer) {
     C_ASSERT(labels_array       != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(label_name         != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(code_label_pointer != NULL, return ASM_INPUT_ERROR);
@@ -276,7 +282,7 @@ asm_error_t check_labels_size(labels_array_t *labels_array) {
 */
 asm_error_t add_fix_up(labels_array_t *labels_array,
                        size_t          label_number,
-                       code_element_t *code_label_pointer) {
+                       command_t      *code_label_pointer) {
     C_ASSERT(labels_array       != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(code_label_pointer != NULL, return ASM_INPUT_ERROR);
 
@@ -363,11 +369,41 @@ asm_error_t do_fixups(labels_array_t *labels_array) {
     C_ASSERT(labels_array != NULL, return ASM_NULL_CODE);
 
     for(size_t index = 0; index < labels_array->fixup_number; index++) {
-        code_element_t *code_pointer = labels_array->fixup[index].code_element;
-        size_t          label_number = labels_array->fixup[index].label_number;
-        address_t       label_value  = labels_array->labels[label_number].label_ip;
+        command_t *code_pointer = labels_array->fixup[index].code_element;
 
-        *(address_t *)code_pointer = label_value;
+        size_t     label_number = labels_array->fixup[index].label_number;
+        label_t *  label        = labels_array->labels + label_number;
+
+        asm_error_t error_code = paste_label_ip(label, code_pointer);
+        if(error_code != ASM_SUCCESS)
+            return error_code;
+    }
+    return ASM_SUCCESS;
+}
+
+/**
+======================================================================================================
+    @brief      Sets value of label in code.
+
+    @details    Pastes label instruction pointer to the code_pointer cell.
+                Does not move instruction pointer.
+                Sets sizeof(address_t) bytes.
+
+    @param [in] label               Label to fill in.
+    @param [in] code_pointer        Cell of code to paste label in.
+
+    @return Error code
+
+======================================================================================================
+*/
+asm_error_t paste_label_ip(label_t   *label,
+                           command_t *code_pointer) {
+    if(memcpy(code_pointer, &label->label_ip, sizeof(address_t)) != code_pointer) {
+        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                     "Error while adding argument to code.\r\n"
+                     "Label: %s\r\n",
+                     label->label_name);
+        return ASM_MEMSET_ERROR;
     }
     return ASM_SUCCESS;
 }

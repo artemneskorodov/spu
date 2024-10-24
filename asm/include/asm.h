@@ -16,7 +16,7 @@ struct code_t {
     size_t          source_code_position;
     size_t          source_current_line;
     labels_array_t  labels;
-    code_element_t *output_code;
+    command_t      *output_code;
     address_t       output_code_size;
 };
 

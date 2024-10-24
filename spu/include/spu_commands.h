@@ -20,16 +20,17 @@ enum spu_error_t {
     SPU_REGISTER_ERROR  = 9 ,
     SPU_WRONG_VERSION   = 10,
     SPU_WRONG_ASSEMBLER = 11,
+    SPU_MEMSET_ERROR    = 12,
 };
 
 struct spu_t {
-    stack_t        *stack;
-    code_element_t *code;
-    address_t       code_size;
-    address_t       instruction_pointer;
-    argument_t      registers[registers_number];
-    argument_t     *random_access_memory;
-    argument_t      push_register;
+    stack_t     *stack;
+    command_t   *code;
+    address_t    code_size;
+    address_t    instruction_pointer;
+    argument_t   registers[registers_number];
+    argument_t  *random_access_memory;
+    argument_t   push_register;
 };
 
 spu_error_t run_command_chai (spu_t *spu);

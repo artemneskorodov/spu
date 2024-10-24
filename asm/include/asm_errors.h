@@ -20,6 +20,7 @@ enum asm_error_t {
     ASM_WRITING_FILE_ERROR      = 15,
     ASM_NO_LABEL                = 16,
     ASM_UNABLE_READ_ARGUMENT    = 17,
+    ASM_MEMSET_ERROR            = 18,
 };
 
 #endif

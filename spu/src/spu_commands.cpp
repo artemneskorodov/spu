@@ -19,9 +19,9 @@ static spu_error_t  pop_two_elements     (spu_t          *spu,
                                           argument_t     *second);
 static argument_t  *get_pop_argument     (spu_t          *spu);
 static argument_t  *get_memory_address   (spu_t          *spu,
-                                          argument_type_t argument_type);
+                                          command_t       argument_type);
 static argument_t  *get_push_argument    (spu_t          *spu,
-                                          argument_type_t argument_type);
+                                          command_t       argument_type);
 static bool         is_below             (argument_t      first,
                                           argument_t      second);
 static bool         is_below_or_equal    (argument_t      first,
@@ -48,8 +48,10 @@ static spu_error_t  jump_with_condition  (spu_t          *spu,
 static spu_error_t  calculate_for_two    (spu_t           *spu,
                                           argument_t     (*function)  (argument_t first,
                                                                        argument_t second));
-static spu_error_t calculate_for_one     (spu_t           *spu,
+static spu_error_t  calculate_for_one    (spu_t           *spu,
                                           argument_t     (*function)  (argument_t item));
+static spu_error_t  copy_argument        (spu_t           *spu,
+                                          void            *output);
 
 /**
 ======================================================================================================
@@ -297,33 +299,7 @@ spu_error_t write_code_dump(spu_t *spu) {
                  "|                Code:                |\r\n"
                  "|_____________________________________|\r\n");
 
-    for(address_t item = 0; item < spu->code_size; item++) {
-        background_t background = DEFAULT_BACKGROUND;
-        if(item == spu->instruction_pointer)
-            background = YELLOW_BACKGROUND;
-
-        color_printf(BLUE_TEXT,    BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "|");
-        color_printf(MAGENTA_TEXT, BOLD_TEXT, background,
-                     "  % 16llu",
-                     item);
-        color_printf(BLUE_TEXT,    BOLD_TEXT, background,
-                     "|");
-        color_printf(DEFAULT_TEXT, BOLD_TEXT, background,
-                     "0x%016llx",
-                     spu->code[item]);
-        color_printf(BLUE_TEXT,    BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "|\r\n|");
-        color_printf(BLUE_TEXT,    BOLD_TEXT, background,
-                     "__________________|__________________");
-        color_printf(BLUE_TEXT,    BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "|");
-        if(item == spu->instruction_pointer)
-            color_printf(GREEN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                         " <--------     (instruction_pointer = 0x%llx)",
-                         spu->instruction_pointer);
-        printf("\r\n");
-    }
+    printf("not implemented\r\n");
 
     return SPU_SUCCESS;
 }
@@ -348,21 +324,7 @@ spu_error_t write_registers_dump(spu_t *spu) {
                  "|              Registers:             |\r\n"
                  "|_____________________________________|\r\n");
 
-    for(address_t reg = 0; reg < registers_number; reg++) {
-        color_printf(CYAN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "|");
-        color_printf(MAGENTA_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "    %s    ",
-                     spu_register_names[reg]);
-        color_printf(CYAN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "|");
-        color_printf(DEFAULT_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "        0x%016llx",
-                     *(code_element_t *)(spu->registers + reg));
-        color_printf(CYAN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "|\r\n"
-                     "|__________|__________________________|\r\n");
-    }
+    printf("not implemented\r\n");
 
     return SPU_SUCCESS;
 }
@@ -387,21 +349,7 @@ spu_error_t write_ram_dump(spu_t *spu) {
                  "|         Random Access Memory        |\r\n"
                  "|_____________________________________|\r\n");
 
-    for(address_t item = 0; item < random_access_memory_size; item++) {
-        color_printf(YELLOW_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "|");
-        color_printf(MAGENTA_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "  % 16llu",
-                     item);
-        color_printf(YELLOW_TEXT,  BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "|");
-        color_printf(DEFAULT_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "0x%016llx",
-                     spu->random_access_memory[item]);
-        color_printf(YELLOW_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "|\r\n"
-                     "|__________________|__________________|\r\n");
-    }
+    printf("not implemented\r\n");
 
     return SPU_SUCCESS;
 }
@@ -436,7 +384,13 @@ spu_error_t run_command_hlt(spu_t */*spu*/) {
 ======================================================================================================
 */
 spu_error_t run_command_jmp(spu_t *spu) {
-    spu->instruction_pointer = (address_t)spu->code[spu->instruction_pointer];
+    spu_error_t error_code              = SPU_SUCCESS;
+    address_t   new_instruction_pointer = 0;
+
+    if((error_code = copy_argument(spu, &new_instruction_pointer)) != SPU_SUCCESS)
+        return error_code;
+
+    spu->instruction_pointer = new_instruction_pointer;
     return SPU_SUCCESS;
 }
 
@@ -577,12 +531,13 @@ spu_error_t run_command_pop(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_call(spu_t *spu) {
-    size_t return_pointer = spu->instruction_pointer + 1;
+    address_t   return_pointer = spu->instruction_pointer + sizeof(address_t);
+    spu_error_t error_code     = SPU_SUCCESS;
+
     if(stack_push(&spu->stack, &return_pointer) != STACK_SUCCESS)
         return SPU_STACK_ERROR;
 
-    spu->instruction_pointer = (size_t)spu->code[spu->instruction_pointer];
-    return SPU_SUCCESS;
+    return run_command_jmp(spu);
 }
 
 /**
@@ -622,10 +577,9 @@ spu_error_t run_command_ret (spu_t *spu) {
 ======================================================================================================
 */
 argument_t *get_args_push_pop(spu_t *spu) {
-    command_t      *code_pointer   = (command_t *)(spu->code +
-                                                   spu->instruction_pointer - 1);
-    command_t       operation_code = code_pointer[1];
-    argument_type_t argument_type  = *(argument_type_t *)code_pointer;
+    command_t code_element   = spu->code[spu->instruction_pointer - 1];
+    command_t operation_code = (command_t)(code_element & operation_code_mask);
+    command_t argument_type  = (command_t)(code_element & argument_type_mask );
 
     if(argument_type & random_access_memory_mask)
         return get_memory_address(spu, argument_type);
@@ -651,9 +605,12 @@ argument_t *get_args_push_pop(spu_t *spu) {
 ======================================================================================================
 */
 argument_t *get_pop_argument(spu_t *spu) {
-    address_t register_number = *(address_t *)(spu->code +
-                                               spu->instruction_pointer);
-    spu->instruction_pointer++;
+    spu_error_t error_code      = SPU_SUCCESS;
+    address_t   register_number = 0;
+
+    if((error_code = copy_argument(spu, &register_number)) != SPU_SUCCESS)
+        return NULL;
+
     return spu->registers + register_number - 1;
 }
 
@@ -675,19 +632,23 @@ argument_t *get_pop_argument(spu_t *spu) {
 ======================================================================================================
 */
 argument_t *get_push_argument(spu_t          *spu,
-                              argument_type_t argument_type) {
+                              command_t       argument_type) {
     spu->push_register = 0;
+    spu_error_t error_code = SPU_SUCCESS;
 
     if(argument_type & immediate_constant_mask) {
-        spu->push_register += *(argument_t *)(spu->code +
-                                              spu->instruction_pointer);
-        spu->instruction_pointer++;
+        argument_t constant_value = 0;
+        if((error_code = copy_argument(spu, &constant_value)) != SPU_SUCCESS)
+            return NULL;
+
+        spu->push_register += constant_value;
     }
 
     if(argument_type & register_parameter_mask) {
-        address_t register_number = *(address_t *)(spu->code +
-                                                   spu->instruction_pointer);
-        spu->instruction_pointer++;
+        address_t register_number = 0;
+        if((error_code = copy_argument(spu, &register_number)) != SPU_SUCCESS)
+            return NULL;
+
         spu->push_register += spu->registers[register_number - 1];
     }
 
@@ -711,19 +672,23 @@ argument_t *get_push_argument(spu_t          *spu,
 ======================================================================================================
 */
 argument_t *get_memory_address(spu_t          *spu,
-                               argument_type_t argument_type) {
-    address_t ram_address = 0;
+                               command_t       argument_type) {
+    address_t   ram_address = 0;
+    spu_error_t error_code  = SPU_SUCCESS;
 
     if(argument_type & immediate_constant_mask) {
-        ram_address += *(address_t *)(spu->code +
-                                      spu->instruction_pointer);
-        spu->instruction_pointer++;
+        address_t constant_value = 0;
+        if((error_code = copy_argument(spu, &constant_value)) != SPU_SUCCESS)
+            return NULL;
+
+        ram_address += constant_value;
     }
 
     if(argument_type & register_parameter_mask) {
-        address_t register_number = *(address_t *)(spu->code +
-                                                   spu->instruction_pointer);
-        spu->instruction_pointer++;
+        address_t register_number = 0;
+        if((error_code = copy_argument(spu, &register_number)) != SPU_SUCCESS)
+            return NULL;
+
         ram_address += (address_t)spu->registers[register_number - 1];
     }
 
@@ -748,8 +713,8 @@ spu_error_t run_command_draw(spu_t *spu) {
     size_t buffer_index = 0;
     for(size_t h = 0; h < spu_drawing_height; h++) {
         for(size_t w = 0; w < spu_drawing_width; w++) {
-            code_element_t memory_element = *(code_element_t *)(spu->random_access_memory +
-                                                                h * spu_drawing_width + w);
+            uint64_t memory_element = *(uint64_t *)(spu->random_access_memory +
+                                                    h * spu_drawing_width + w);
             if(memory_element == 0)
                 buffer[buffer_index++] = '.';
 
@@ -922,11 +887,10 @@ spu_error_t jump_with_condition(spu_t  *spu,
     if(pop_two_elements(spu, &first_item, &second_item) != SPU_SUCCESS)
         return SPU_STACK_ERROR;
 
-    if(comparator(first_item, second_item)) {
+    if(comparator(first_item, second_item))
         return run_command_jmp(spu);
-    }
 
-    spu->instruction_pointer++;
+    spu->instruction_pointer += sizeof(address_t);
     return SPU_SUCCESS;
 }
 
@@ -1121,5 +1085,28 @@ static spu_error_t calculate_for_one     (spu_t           *spu,
     if(stack_push(&spu->stack, &result) != STACK_SUCCESS)
         return SPU_STACK_ERROR;
 
+    return SPU_SUCCESS;
+}
+
+/**
+======================================================================================================
+    @brief      Reads one argument from code.
+
+    @details    Copies 8 bytes from code array to output.
+                Moves instruction pointer to next cell of code.
+
+    @param [in] spu                 SPU structure
+    @param [in] output              Storage to argument.
+
+    @return Error code
+
+======================================================================================================
+*/
+spu_error_t copy_argument(spu_t *spu,
+                          void  *output) {
+    if(memcpy(output, spu->code + spu->instruction_pointer, sizeof(uint64_t)) != output)
+        return SPU_MEMSET_ERROR;
+
+    spu->instruction_pointer += sizeof(uint64_t);
     return SPU_SUCCESS;
 }

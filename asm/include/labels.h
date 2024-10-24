@@ -25,7 +25,7 @@ bool        is_label                       (char           *command);
 asm_error_t code_labels_init               (labels_array_t *labels_array);
 asm_error_t get_label_instruction_pointer  (labels_array_t *labels_array,
                                             char           *label_name,
-                                            code_element_t *code_label_pointer);
+                                            command_t      *code_label_pointer);
 asm_error_t do_fixups                      (labels_array_t *labels_array);
 asm_error_t code_add_label                 (labels_array_t *labels_array,
                                             char           *label_name,

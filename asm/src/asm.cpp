@@ -202,7 +202,7 @@ asm_error_t write_code(code_t *code) {
         return error_code;
 
     if(fwrite(code->output_code,
-              sizeof(code_element_t),
+              sizeof(command_t),
               code->output_code_size,
               output_file) != code->output_code_size) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
