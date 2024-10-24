@@ -12,7 +12,7 @@
 #include "asm.h"
 #include "compiler.h"
 
-static const char  *default_output_filename = "a.bin";
+static const char *default_output_filename = "a.bin";
 
 static asm_error_t parse_flags      (code_t     *code,
                                      int         argc,
@@ -20,22 +20,15 @@ static asm_error_t parse_flags      (code_t     *code,
 static asm_error_t read_source_code (code_t     *code);
 static asm_error_t write_code       (code_t     *code);
 static asm_error_t destroy_code     (code_t     *code);
+static asm_error_t write_header     (code_t     *code,
+                                     FILE       *output_file);
 
 int main(int argc, const char *argv[]) {
     code_t code = {};
-    if(parse_flags     (&code, argc, argv) != ASM_SUCCESS) {
-        destroy_code(&code);
-        return EXIT_FAILURE;
-    }
-    if(read_source_code(&code)             != ASM_SUCCESS) {
-        destroy_code(&code);
-        return EXIT_FAILURE;
-    }
-    if(compile_code    (&code)             != ASM_SUCCESS) {
-        destroy_code(&code);
-        return EXIT_FAILURE;
-    }
-    if(write_code      (&code)             != ASM_SUCCESS) {
+    if(parse_flags     (&code, argc, argv) != ASM_SUCCESS ||
+       read_source_code(&code)             != ASM_SUCCESS ||
+       compile_code    (&code)             != ASM_SUCCESS ||
+       write_code      (&code)             != ASM_SUCCESS) {
         destroy_code(&code);
         return EXIT_FAILURE;
     }
@@ -61,7 +54,9 @@ int main(int argc, const char *argv[]) {
 
 ======================================================================================================
 */
-asm_error_t parse_flags(code_t *code, int argc, const char *argv[]) {
+asm_error_t parse_flags(code_t     *code,
+                        int         argc,
+                        const char *argv[]) {
     C_ASSERT(code != NULL, return ASM_NULL_CODE);
 
     if(argc <= 1) {
@@ -160,6 +155,7 @@ asm_error_t write_code(code_t *code) {
     C_ASSERT(code != NULL, return ASM_NULL_CODE);
 
     FILE *output_file = fopen(code->output_filename, "wb");
+
     if(output_file == NULL) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "Error while opening output file '%s'.\r\n",
@@ -167,6 +163,42 @@ asm_error_t write_code(code_t *code) {
         return ASM_OPENING_FILE_ERROR;
     }
 
+    asm_error_t error_code = ASM_SUCCESS;
+    if((error_code = write_header(code, output_file)) != ASM_SUCCESS)
+        return error_code;
+
+    if(fwrite(code->output_code,
+              sizeof(code_element_t),
+              code->output_code_size,
+              output_file) != code->output_code_size) {
+        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                     "Error while writing compiled code to file '%s'.\r\n",
+                     code->output_filename);
+        return ASM_WRITING_FILE_ERROR;
+    }
+
+    color_printf(GREEN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+                 "Successfully wrote binary code to file '%s'.\r\n",
+                 code->output_filename);
+    return ASM_SUCCESS;
+}
+
+/**
+======================================================================================================
+    @brief      Adds assembler header to binary code.
+
+    @details    Header contains of assembler name, version and number of elements in binary code.
+                It is written to the start of file.
+
+    @param [in] code                Code structure.
+    @param [in] output_file         File where function will write header.
+
+    @return Error code.
+
+======================================================================================================
+*/
+asm_error_t write_header(code_t *code,
+                         FILE   *output_file) {
     program_header_t header = {
         .assembler_version  = assembler_version,
         .code_size          = code->output_code_size};
@@ -182,19 +214,6 @@ asm_error_t write_code(code_t *code) {
         return ASM_WRITING_FILE_ERROR;
     }
 
-    if(fwrite(code->output_code,
-              sizeof(uint64_t),
-              code->output_code_size,
-              output_file) != code->output_code_size) {
-        color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "Error while writing compiled code to file '%s'.\r\n",
-                     code->output_filename);
-        return ASM_WRITING_FILE_ERROR;
-    }
-
-    color_printf(GREEN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                 "Successfully wrote binary code to file '%s'.\r\n",
-                 code->output_filename);
     return ASM_SUCCESS;
 }
 

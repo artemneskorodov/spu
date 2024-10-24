@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "asm_errors.h"
+#include "spu_facilities.h"
 
 static const size_t max_label_name_size = 32;
 
@@ -24,11 +25,11 @@ bool        is_label                       (char           *command);
 asm_error_t code_labels_init               (labels_array_t *labels_array);
 asm_error_t get_label_instruction_pointer  (labels_array_t *labels_array,
                                             char           *label_name,
-                                            uint64_t       *code_label_pointer);
+                                            code_element_t *code_label_pointer);
 asm_error_t do_fixups                      (labels_array_t *labels_array);
 asm_error_t code_add_label                 (labels_array_t *labels_array,
                                             char           *label_name,
-                                            size_t          instruction_pointer,
+                                            address_t       instruction_pointer,
                                             bool            is_defined);
 
 #endif

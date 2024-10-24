@@ -7,10 +7,10 @@
 #include "colors.h"
 #include "utils.h"
 
-static uint64_t   *get_args_push_pop    (spu_t *spu);
-static spu_error_t write_code_dump      (spu_t *spu);
-static spu_error_t write_registers_dump (spu_t *spu);
-static spu_error_t write_ram_dump       (spu_t *spu);
+static argument_t  *get_args_push_pop    (spu_t *spu);
+static spu_error_t  write_code_dump      (spu_t *spu);
+static spu_error_t  write_registers_dump (spu_t *spu);
+static spu_error_t  write_ram_dump       (spu_t *spu);
 
 /**
 ======================================================================================================
@@ -206,7 +206,7 @@ spu_error_t run_command_in(spu_t *spu) {
 */
 spu_error_t run_command_sqrt(spu_t *spu) {
     argument_t item = 0;
-    if(stack_pop(&spu->stack, &item) != STACK_SUCCESS)
+    if(stack_pop (&spu->stack, &item) != STACK_SUCCESS)
         return SPU_STACK_ERROR;
 
     item = sqrt(item);
@@ -230,7 +230,7 @@ spu_error_t run_command_sqrt(spu_t *spu) {
 */
 spu_error_t run_command_sin(spu_t *spu) {
     argument_t item = 0;
-    if(stack_pop(&spu->stack, &item) != STACK_SUCCESS)
+    if(stack_pop (&spu->stack, &item) != STACK_SUCCESS)
         return SPU_STACK_ERROR;
 
     item = sin(item);
@@ -254,7 +254,7 @@ spu_error_t run_command_sin(spu_t *spu) {
 */
 spu_error_t run_command_cos(spu_t *spu) {
     argument_t item = 0;
-    if(stack_pop(&spu->stack, &item) != STACK_SUCCESS)
+    if(stack_pop (&spu->stack, &item) != STACK_SUCCESS)
         return SPU_STACK_ERROR;
 
     item = cos(item);
@@ -287,13 +287,13 @@ spu_error_t run_command_dump(spu_t *spu) {
                  "==========================================\r\n");
 
     spu_error_t error_code = SPU_SUCCESS;
-    if((error_code = write_code_dump(spu)) != SPU_SUCCESS)
+    if((error_code = write_code_dump     (spu)) != SPU_SUCCESS)
         return error_code;
 
     if((error_code = write_registers_dump(spu)) != SPU_SUCCESS)
         return error_code;
 
-    if((error_code = write_ram_dump(spu)) != SPU_SUCCESS)
+    if((error_code = write_ram_dump      (spu)) != SPU_SUCCESS)
         return error_code;
 
     color_printf(GREEN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
@@ -322,26 +322,26 @@ spu_error_t write_code_dump(spu_t *spu) {
                  "|                Code:                |\r\n"
                  "|_____________________________________|\r\n");
 
-    for(size_t item = 0; item < spu->code_size; item++) {
+    for(address_t item = 0; item < spu->code_size; item++) {
         background_t background = DEFAULT_BACKGROUND;
         if(item == spu->instruction_pointer)
             background = YELLOW_BACKGROUND;
 
-        color_printf(BLUE_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+        color_printf(BLUE_TEXT,    BOLD_TEXT, DEFAULT_BACKGROUND,
                      "|");
         color_printf(MAGENTA_TEXT, BOLD_TEXT, background,
                      "  % 16llu",
                      item);
-        color_printf(BLUE_TEXT, BOLD_TEXT, background,
+        color_printf(BLUE_TEXT,    BOLD_TEXT, background,
                      "|");
         color_printf(DEFAULT_TEXT, BOLD_TEXT, background,
                      "0x%016llx",
                      spu->code[item]);
-        color_printf(BLUE_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+        color_printf(BLUE_TEXT,    BOLD_TEXT, DEFAULT_BACKGROUND,
                      "|\r\n|");
-        color_printf(BLUE_TEXT, BOLD_TEXT, background,
+        color_printf(BLUE_TEXT,    BOLD_TEXT, background,
                      "__________________|__________________");
-        color_printf(BLUE_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+        color_printf(BLUE_TEXT,    BOLD_TEXT, DEFAULT_BACKGROUND,
                      "|");
         if(item == spu->instruction_pointer)
             color_printf(GREEN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
@@ -373,7 +373,7 @@ spu_error_t write_registers_dump(spu_t *spu) {
                  "|              Registers:             |\r\n"
                  "|_____________________________________|\r\n");
 
-    for(size_t reg = 0; reg < registers_number; reg++) {
+    for(address_t reg = 0; reg < registers_number; reg++) {
         color_printf(CYAN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "|");
         color_printf(MAGENTA_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
@@ -383,7 +383,7 @@ spu_error_t write_registers_dump(spu_t *spu) {
                      "|");
         color_printf(DEFAULT_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "        0x%016llx",
-                     *(uint64_t *)(spu->registers + reg));
+                     *(code_element_t *)(spu->registers + reg));
         color_printf(CYAN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "|\r\n"
                      "|__________|__________________________|\r\n");
@@ -412,13 +412,13 @@ spu_error_t write_ram_dump(spu_t *spu) {
                  "|         Random Access Memory        |\r\n"
                  "|_____________________________________|\r\n");
 
-    for(size_t item = 0; item < random_access_memory_size; item++) {
+    for(address_t item = 0; item < random_access_memory_size; item++) {
         color_printf(YELLOW_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "|");
         color_printf(MAGENTA_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "  % 16llu",
                      item);
-        color_printf(YELLOW_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+        color_printf(YELLOW_TEXT,  BOLD_TEXT, DEFAULT_BACKGROUND,
                      "|");
         color_printf(DEFAULT_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "0x%016llx",
@@ -461,7 +461,7 @@ spu_error_t run_command_hlt(spu_t */*spu*/) {
 ======================================================================================================
 */
 spu_error_t run_command_jmp(spu_t *spu) {
-    spu->instruction_pointer = (size_t)spu->code[spu->instruction_pointer];
+    spu->instruction_pointer = (address_t)spu->code[spu->instruction_pointer];
     return SPU_SUCCESS;
 }
 
@@ -725,50 +725,56 @@ spu_error_t run_command_ret (spu_t *spu) {
 
 ======================================================================================================
 */
-uint64_t *get_args_push_pop(spu_t *spu) {
-    uint32_t *code_pointer   = (uint32_t *)(spu->code + spu->instruction_pointer - 1);
-    command_t operation_code = (command_t)code_pointer[1];
-    uint32_t  argument_type  = code_pointer[0];
+argument_t *get_args_push_pop(spu_t *spu) {
+    command_t      *code_pointer   = (command_t *)(spu->code +
+                                                   spu->instruction_pointer - 1);
+    command_t       operation_code = code_pointer[1];
+    argument_type_t argument_type  = (argument_type_t)code_pointer[0];
 
     if(argument_type & random_access_memory_mask) {
-        size_t ram_address = 0;
+        address_t ram_address = 0;
 
         if(argument_type & immediate_constant_mask) {
-            ram_address += *(size_t *)(spu->code + spu->instruction_pointer);
+            ram_address += *(address_t *)(spu->code +
+                                          spu->instruction_pointer);
             spu->instruction_pointer++;
         }
 
         if(argument_type & register_parameter_mask) {
-            size_t register_number = *(size_t *)(spu->code + spu->instruction_pointer);
+            address_t register_number = *(address_t *)(spu->code +
+                                                       spu->instruction_pointer);
             spu->instruction_pointer++;
-            ram_address += (size_t)spu->registers[register_number - 1];
+            ram_address += (address_t)spu->registers[register_number - 1];
         }
 
-        return (uint64_t *)(spu->random_access_memory + ram_address);
+        return spu->random_access_memory + ram_address;
     }
 
     else{
         if(operation_code == CMD_POP) {
-            size_t register_number = *(size_t *)(spu->code + spu->instruction_pointer);
+            address_t register_number = *(address_t *)(spu->code +
+                                                       spu->instruction_pointer);
             spu->instruction_pointer++;
-            return (uint64_t *)(spu->registers + register_number - 1);
+            return spu->registers + register_number - 1;
         }
 
         else {
             spu->push_register = 0;
 
             if(argument_type & immediate_constant_mask) {
-                spu->push_register += *(argument_t *)(spu->code + spu->instruction_pointer);
+                spu->push_register += *(argument_t *)(spu->code +
+                                                      spu->instruction_pointer);
                 spu->instruction_pointer++;
             }
 
             if(argument_type & register_parameter_mask) {
-                size_t register_number = *(size_t *)(spu->code + spu->instruction_pointer);
+                address_t register_number = *(address_t *)(spu->code +
+                                                           spu->instruction_pointer);
                 spu->instruction_pointer++;
                 spu->push_register += spu->registers[register_number - 1];
             }
 
-            return (uint64_t *)&spu->push_register;
+            return &spu->push_register;
         }
     }
 }
@@ -791,7 +797,8 @@ spu_error_t run_command_draw (spu_t *spu) {
     size_t buffer_index = 0;
     for(size_t h = 0; h < spu_drawing_height; h++) {
         for(size_t w = 0; w < spu_drawing_width; w++) {
-            uint64_t memory_element = *(uint64_t *)(spu->random_access_memory + h * spu_drawing_width + w);
+            code_element_t memory_element = *(code_element_t *)(spu->random_access_memory +
+                                                                h * spu_drawing_width + w);
             if(memory_element == 0)
                 buffer[buffer_index++] = '.';
 
@@ -804,5 +811,78 @@ spu_error_t run_command_draw (spu_t *spu) {
     Sleep(30);
     system("cls");
     fputs(buffer, stderr);
+    return SPU_SUCCESS;
+}
+
+/**
+======================================================================================================
+    @brief      Main command.
+
+    @details    Prints epileptic tea.
+
+    @param [in] spu                 SPU structure
+
+    @return Error code
+
+======================================================================================================
+*/
+spu_error_t run_command_chai(spu_t */*spu*/) {
+    const char *first_frame  = "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@......@@@..@@@@..@@@@@@.@@@@@@......@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@...@@@@@@@..@@@@..@@@@@...@@@@@@@..@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@..@@@@@@@@........@@@@..@..@@@@@@..@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@...@@@@@@@..@@@@..@@@.......@@@@@..@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@......@@@..@@@@..@@@..@@@..@@@......@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@###############@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@######        +      ######@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@##   +     +         +    +  ##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@#      +     +    + + +         #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@##      +      +        +    ##@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@.######    +      +   ######......@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@.......###############.......@@@@...@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@...........................@@@@@@@..@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@...........................@@@@@@...@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@@.........................@@@@@...@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@..............................@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@...................@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@.............@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n"
+                               "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\r\n";
+
+    const char *second_frame = ".......................................................................................\r\n"
+                               "......................@@@@@@...@@....@@......@......@@@@@@.............................\r\n"
+                               ".....................@@@.......@@....@@.....@@@.......@@...............................\r\n"
+                               ".....................@@........@@@@@@@@....@@.@@......@@...............................\r\n"
+                               ".....................@@@.......@@....@@...@@@@@@@.....@@...............................\r\n"
+                               "......................@@@@@@...@@....@@...@@...@@...@@@@@@.............................\r\n"
+                               ".................................###############.......................................\r\n"
+                               "...........................######    +    +     ######.................................\r\n"
+                               ".........................##     +    +    +  +    +   ##...............................\r\n"
+                               "........................#        +  +   +  +     +    + #..............................\r\n"
+                               ".........................## +        +   +  +         ##...............................\r\n"
+                               "..........................@######  +            ######@@@@@@...........................\r\n"
+                               "..........................@@@@@@@###############@@@@@@@....@@@.........................\r\n"
+                               "...........................@@@@@@@@@@@@@@@@@@@@@@@@@@@.......@@........................\r\n"
+                               "...........................@@@@@@@@@@@@@@@@@@@@@@@@@@@......@@@........................\r\n"
+                               "............................@@@@@@@@@@@@@@@@@@@@@@@@@.....@@@..........................\r\n"
+                               ".............................@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@............................\r\n"
+                               "..............................@@@@@@@@@@@@@@@@@@@......................................\r\n"
+                               ".................................@@@@@@@@@@@@@.........................................\r\n"
+                               ".......................................................................................\r\n"
+                               ".......................................................................................\r\n"
+                               ".......................................................................................\r\n"
+                               ".......................................................................................\r\n";
+
+    const size_t chai_cycles = 1024;
+    for(size_t frame = 0; frame < chai_cycles; frame++) {
+        system("cls");
+        if(frame % 2 == 0)
+            fputs(first_frame, stderr);
+        else
+            fputs(second_frame, stderr);
+        Sleep(50);
+    }
     return SPU_SUCCESS;
 }

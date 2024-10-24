@@ -7,6 +7,7 @@
 #include "custom_assert.h"
 #include "colors.h"
 #include "memory.h"
+#include "spu_facilities.h"
 
 /**
 ======================================================================================================
@@ -26,10 +27,10 @@ static const size_t fixups_init_size    = 32;
 
 static asm_error_t try_find_label    (labels_array_t *labels_array,
                                       char           *label_name,
-                                      uint64_t       *code_label_pointer);
+                                      code_element_t *code_label_pointer);
 static asm_error_t add_fix_up        (labels_array_t *labels_array,
                                       size_t          label_number,
-                                      uint64_t       *code_label_pointer);
+                                      code_element_t *code_label_pointer);
 static asm_error_t check_labels_size (labels_array_t *labels_array);
 static asm_error_t check_fixup_size  (labels_array_t *labels_array);
 
@@ -40,9 +41,9 @@ static asm_error_t check_fixup_size  (labels_array_t *labels_array);
 ======================================================================================================
 */
 struct label_t {
-    char        label_name[max_label_name_size];
-    size_t      label_ip;
-    bool        is_defined;
+    char            label_name[max_label_name_size];
+    address_t       label_ip;
+    bool            is_defined;
 };
 
 /**
@@ -52,8 +53,8 @@ struct label_t {
 ======================================================================================================
 */
 struct fixup_t {
-    size_t      label_number;
-    uint64_t   *code_element;
+    size_t          label_number;
+    code_element_t *code_element;
 };
 
 /**
@@ -110,7 +111,7 @@ asm_error_t code_labels_init(labels_array_t *labels_array) {
 */
 asm_error_t try_find_label(labels_array_t *labels_array,
                            char           *label_name,
-                           uint64_t       *code_label_pointer) {
+                           code_element_t *code_label_pointer) {
     C_ASSERT(labels_array       != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(label_name         != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(code_label_pointer != NULL, return ASM_INPUT_ERROR);
@@ -151,20 +152,15 @@ asm_error_t try_find_label(labels_array_t *labels_array,
 */
 asm_error_t get_label_instruction_pointer(labels_array_t *labels_array,
                                           char           *label_name,
-                                          uint64_t       *code_label_pointer) {
+                                          code_element_t *code_label_pointer) {
     C_ASSERT(labels_array       != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(label_name         != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(code_label_pointer != NULL, return ASM_INPUT_ERROR);
 
     asm_error_t error_code = ASM_SUCCESS;
-    error_code = try_find_label(labels_array,
-                                label_name,
-                                code_label_pointer);
-
-    if(error_code == ASM_SUCCESS)
-        return ASM_SUCCESS;
-
-    if(error_code != ASM_NO_LABEL)
+    if((error_code = try_find_label(labels_array,
+                                    label_name,
+                                    code_label_pointer)) != ASM_NO_LABEL)
         return error_code;
 
     if((error_code = code_add_label(labels_array,
@@ -201,7 +197,7 @@ asm_error_t get_label_instruction_pointer(labels_array_t *labels_array,
 */
 asm_error_t code_add_label(labels_array_t *labels_array,
                            char           *label_name,
-                           size_t          instruction_pointer,
+                           address_t       instruction_pointer,
                            bool            is_defined) {
     C_ASSERT(labels_array != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(label_name   != NULL, return ASM_INPUT_ERROR);
@@ -277,7 +273,7 @@ asm_error_t check_labels_size(labels_array_t *labels_array) {
 */
 asm_error_t add_fix_up(labels_array_t *labels_array,
                        size_t          label_number,
-                       uint64_t       *code_label_pointer) {
+                       code_element_t *code_label_pointer) {
     C_ASSERT(labels_array       != NULL, return ASM_INPUT_ERROR);
     C_ASSERT(code_label_pointer != NULL, return ASM_INPUT_ERROR);
 
@@ -364,11 +360,11 @@ asm_error_t do_fixups(labels_array_t *labels_array) {
     C_ASSERT(labels_array != NULL, return ASM_NULL_CODE);
 
     for(size_t index = 0; index < labels_array->fixup_number; index++) {
-        uint64_t *code_pointer = labels_array->fixup[index].code_element;
-        size_t    label_number = labels_array->fixup[index].label_number;
-        size_t    label_value  = labels_array->labels[label_number].label_ip;
+        code_element_t *code_pointer = labels_array->fixup[index].code_element;
+        size_t          label_number = labels_array->fixup[index].label_number;
+        address_t       label_value  = labels_array->labels[label_number].label_ip;
 
-        *code_pointer = label_value;
+        *(address_t *)code_pointer = label_value;
     }
     return ASM_SUCCESS;
 }

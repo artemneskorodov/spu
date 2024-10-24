@@ -20,15 +20,16 @@ static asm_error_t parse_command_arguments  (code_t     *code,
                                              command_t   operation_code);
 static asm_error_t parse_call_jmp_arguments (code_t     *code);
 static asm_error_t parse_push_pop_arguments (code_t     *code);
-static size_t      get_register_number      (const char *register_name);
-static command_t   get_command_value        (const char *command_name);
 static asm_error_t try_read_RAM_const_reg   (code_t     *code);
 static asm_error_t try_read_RAM_const       (code_t     *code);
 static asm_error_t try_read_RAM_reg         (code_t     *code);
 static asm_error_t try_read_const_reg       (code_t     *code);
 static asm_error_t try_read_const           (code_t     *code);
 static asm_error_t try_read_reg             (code_t     *code);
-static asm_error_t verify_register          (size_t      register_number);
+static asm_error_t verify_register          (address_t   register_number);
+static address_t   get_register_number      (const char *register_name);
+static command_t   get_command_value        (const char *command_name);
+
 
 /**
 ======================================================================================================
@@ -113,7 +114,8 @@ asm_error_t allocate_code_memory(code_t *code) {
     C_ASSERT(code              != NULL, return ASM_NULL_CODE  );
     C_ASSERT(code->source_code != NULL, return ASM_INPUT_ERROR);
 
-    code->output_code = (uint64_t *)_calloc(code->source_size, sizeof(uint64_t));
+    code->output_code = (code_element_t *)_calloc(code->source_size,
+                                                  sizeof(code_element_t));
     if(code->output_code == NULL) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "Error while allocating memory to exit code.\r\n");
@@ -183,9 +185,10 @@ asm_error_t parse_command(code_t *code, char *command) {
         return ASM_SYNTAX_ERROR;
     }
 
-    uint32_t *code_pointer = (uint32_t *)(code->output_code + code->output_code_size);
+    argument_type_t *code_pointer = (argument_type_t *)(code->output_code +
+                                                        code->output_code_size);
     code->output_code_size++;
-    code_pointer[1] = operation_code;
+    *(command_t *)(code_pointer + 1) = operation_code;
 
     asm_error_t error_code = ASM_SUCCESS;
     if((error_code = parse_command_arguments(code, operation_code)) != ASM_SUCCESS)
@@ -269,13 +272,14 @@ asm_error_t parse_call_jmp_arguments(code_t *code) {
     while(!isgraph(code->source_code[code->source_code_position]))
         code->source_code_position++;
 
-    size_t jump_instruction_pointer = 0;
+    address_t jump_instruction_pointer = 0;
     char label[max_label_name_size] = {};
 
     if(sscanf(code->source_code + code->source_code_position,
               "%llu",
               &jump_instruction_pointer) == 1) {
-        *(size_t *)(code->output_code + code->output_code_size) = jump_instruction_pointer;
+        *(address_t *)(code->output_code +
+                       code->output_code_size) = jump_instruction_pointer;
         code->output_code_size++;
         return ASM_SUCCESS;
     }
@@ -286,9 +290,10 @@ asm_error_t parse_call_jmp_arguments(code_t *code) {
         if(!is_label(label))
             return ASM_LABEL_ERROR;
 
-        asm_error_t error_code = ASM_SUCCESS;
-        uint64_t *code_pointer = code->output_code + code->output_code_size;
+        code_element_t *code_pointer = code->output_code +
+                                       code->output_code_size;
         code->output_code_size++;
+        asm_error_t error_code = ASM_SUCCESS;
         if((error_code = get_label_instruction_pointer(&code->labels,
                                                        label,
                                                        code_pointer)) != ASM_SUCCESS)
@@ -323,41 +328,23 @@ asm_error_t parse_push_pop_arguments(code_t *code) {
 
     asm_error_t error_code = ASM_SUCCESS;
 
-    if((error_code = try_read_RAM_const_reg(code)) == ASM_SUCCESS)
-        return ASM_SUCCESS;
 
-    if(error_code != ASM_UNABLE_READ_ARGUMENT)
+    if((error_code = try_read_RAM_const_reg(code)) != ASM_UNABLE_READ_ARGUMENT)
         return error_code;
 
-    if((error_code = try_read_RAM_const(code)) == ASM_SUCCESS)
-        return ASM_SUCCESS;
-
-    if(error_code != ASM_UNABLE_READ_ARGUMENT)
+    if((error_code = try_read_RAM_reg      (code)) != ASM_UNABLE_READ_ARGUMENT)
         return error_code;
 
-    if((error_code = try_read_RAM_reg(code)) == ASM_SUCCESS)
-    if(error_code == ASM_SUCCESS)
-        return ASM_SUCCESS;
-
-    if(error_code != ASM_UNABLE_READ_ARGUMENT)
+    if((error_code = try_read_RAM_const    (code)) != ASM_UNABLE_READ_ARGUMENT)
         return error_code;
 
-    if((error_code = try_read_const_reg(code)) == ASM_SUCCESS)
-        return ASM_SUCCESS;
-
-    if(error_code != ASM_UNABLE_READ_ARGUMENT)
+    if((error_code = try_read_const_reg    (code)) != ASM_UNABLE_READ_ARGUMENT)
         return error_code;
 
-    if((error_code = try_read_const(code)) == ASM_SUCCESS)
-        return ASM_SUCCESS;
-
-    if(error_code != ASM_UNABLE_READ_ARGUMENT)
+    if((error_code = try_read_const        (code)) != ASM_UNABLE_READ_ARGUMENT)
         return error_code;
 
-    if((error_code = try_read_reg(code)) == ASM_SUCCESS)
-        return ASM_SUCCESS;
-
-    if(error_code != ASM_UNABLE_READ_ARGUMENT)
+    if((error_code = try_read_reg          (code)) != ASM_UNABLE_READ_ARGUMENT)
         return error_code;
 
     color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
@@ -379,9 +366,9 @@ asm_error_t parse_push_pop_arguments(code_t *code) {
 
 ======================================================================================================
 */
-size_t get_register_number(const char *register_name) {
+address_t get_register_number(const char *register_name) {
     C_ASSERT(register_name != NULL, return ASM_INPUT_ERROR);
-    for(size_t i = 0; i < registers_number; i++) {
+    for(address_t i = 0; i < registers_number; i++) {
         if(strcmp(spu_register_names[i], register_name) == 0)
             return i + 1;
     }
@@ -392,7 +379,8 @@ size_t get_register_number(const char *register_name) {
 ======================================================================================================
     @brief      Translates command as string to command enumerator.
 
-    @details    Runs through supported_commands array and compares written names to command_name.
+    @details    Runs through supported_commands array and
+                compares written names to command_name.
 
     @param [in] command_name        String with command.
 
@@ -404,9 +392,11 @@ command_t get_command_value(const char *command_name) {
     C_ASSERT(command_name != NULL, return CMD_UNKNOWN);
 
     size_t commands_number = sizeof(supported_commands) / sizeof(supported_commands[0]);
-    for(size_t index = 0; index < commands_number; index++)
-        if(strcmp(command_name, supported_commands[index].command_name) == 0)
+    for(size_t index = 0; index < commands_number; index++) {
+        const char *current_command = supported_commands[index].command_name;
+        if(strcmp(command_name, current_command) == 0)
             return supported_commands[index].command_value;
+    }
     return CMD_UNKNOWN;
 }
 
@@ -424,32 +414,34 @@ command_t get_command_value(const char *command_name) {
 ======================================================================================================
 */
 asm_error_t try_read_RAM_const_reg(code_t *code) {
-    uint32_t *argument_type = (uint32_t *)(code->output_code + code->output_code_size - 1);
+    argument_type_t *argument_type          = (argument_type_t *)(code->output_code +
+                                                                  code->output_code_size - 1);
+    char             register_name[3]       = {};
+    address_t        constant_integer_value = 0;
+    char            *source_pointer         = code->source_code +
+                                              code->source_code_position;
 
-    char     register_name[3]       = {};
-    uint64_t constant_integer_value = 0;
-
-    if(sscanf(code->source_code + code->source_code_position,
+    if(sscanf(source_pointer,
               "[%2[abcxspbpdisid] + %llu]",
               register_name,
               &constant_integer_value) != 2 &&
-       sscanf(code->source_code + code->source_code_position,
+       sscanf(source_pointer,
               "[%llu + %2[abcxspbpdisid]]",
               &constant_integer_value,
               register_name) != 2)
         return ASM_UNABLE_READ_ARGUMENT;
 
-    size_t register_number = get_register_number(register_name);
+    address_t register_number = get_register_number(register_name);
     if(verify_register(register_number) != ASM_SUCCESS)
         return ASM_REGISTER_ERROR;
 
-    *argument_type ^= immediate_constant_mask;
-    *argument_type ^= register_parameter_mask;
-    *argument_type ^= random_access_memory_mask;
+    *argument_type |= immediate_constant_mask;
+    *argument_type |= register_parameter_mask;
+    *argument_type |= random_access_memory_mask;
 
-    *(uint64_t *)(code->output_code + code->output_code_size) = constant_integer_value;
+    *(address_t  *)(code->output_code + code->output_code_size) = constant_integer_value;
     code->output_code_size++;
-    *(size_t   *)(code->output_code + code->output_code_size) = register_number;
+    *(address_t  *)(code->output_code + code->output_code_size) = register_number;
     code->output_code_size++;
 
     return ASM_SUCCESS;
@@ -469,19 +461,21 @@ asm_error_t try_read_RAM_const_reg(code_t *code) {
 ======================================================================================================
 */
 asm_error_t try_read_RAM_const(code_t *code) {
-    uint32_t *argument_type = (uint32_t *)(code->output_code + code->output_code_size - 1);
+    argument_type_t *argument_type          = (uint32_t *)(code->output_code +
+                                                           code->output_code_size - 1);
+    address_t        constant_integer_value = 0;
+    char            *source_pointer         = code->source_code +
+                                              code->source_code_position;
 
-    uint64_t constant_integer_value = 0;
-
-    if(sscanf(code->source_code + code->source_code_position,
+    if(sscanf(source_pointer,
               "[%llu]",
               &constant_integer_value) != 1)
         return ASM_UNABLE_READ_ARGUMENT;
 
-    *argument_type ^= immediate_constant_mask;
-    *argument_type ^= random_access_memory_mask;
+    *argument_type |= immediate_constant_mask;
+    *argument_type |= random_access_memory_mask;
 
-    *(uint64_t *)(code->output_code + code->output_code_size) = constant_integer_value;
+    *(address_t *)(code->output_code + code->output_code_size) = constant_integer_value;
     code->output_code_size++;
 
     return ASM_SUCCESS;
@@ -501,23 +495,25 @@ asm_error_t try_read_RAM_const(code_t *code) {
 ======================================================================================================
 */
 asm_error_t try_read_RAM_reg(code_t *code) {
-    uint32_t *argument_type = (uint32_t *)(code->output_code + code->output_code_size - 1);
+    argument_type_t *argument_type    = (argument_type_t *)(code->output_code +
+                                                            code->output_code_size - 1);
+    char             register_name[3] = {};
+    char            *source_pointer   = code->source_code +
+                                        code->source_code_position;
 
-    char     register_name[3]       = {};
-
-    if(sscanf(code->source_code + code->source_code_position,
+    if(sscanf(source_pointer,
               "[%2[abcxspbpdisid]]",
               register_name) != 1)
         return ASM_UNABLE_READ_ARGUMENT;
 
-    size_t register_number = get_register_number(register_name);
+    address_t register_number = get_register_number(register_name);
     if(verify_register(register_number) != ASM_SUCCESS)
         return ASM_REGISTER_ERROR;
 
-    *argument_type ^= register_parameter_mask;
-    *argument_type ^= random_access_memory_mask;
+    *argument_type |= register_parameter_mask;
+    *argument_type |= random_access_memory_mask;
 
-    *(size_t *)(code->output_code + code->output_code_size) = register_number;
+    *(address_t *)(code->output_code + code->output_code_size) = register_number;
     code->output_code_size++;
 
     return ASM_SUCCESS;
@@ -537,31 +533,33 @@ asm_error_t try_read_RAM_reg(code_t *code) {
 ======================================================================================================
 */
 asm_error_t try_read_const_reg(code_t *code) {
-    uint32_t *argument_type = (uint32_t *)(code->output_code + code->output_code_size - 1);
+    argument_type_t *argument_type         = (argument_type_t *)(code->output_code +
+                                                                 code->output_code_size - 1);
+    char             register_name[3]      = {};
+    argument_t       constant_double_value = 0;
+    char            *source_pointer        = code->source_code +
+                                             code->source_code_position;
 
-    char     register_name[3]       = {};
-    double   constant_double_value  = 0;
-
-    if(sscanf(code->source_code + code->source_code_position,
+    if(sscanf(source_pointer,
               "%lg + %2[abcxspbpdisid]",
               &constant_double_value,
               register_name) != 2 &&
-       sscanf(code->source_code + code->source_code_position,
+       sscanf(source_pointer,
               "%2[abcxspbpdisid] + %lg",
               register_name,
               &constant_double_value) != 2)
         return ASM_UNABLE_READ_ARGUMENT;
 
-    size_t register_number = get_register_number(register_name);
+    address_t register_number = get_register_number(register_name);
     if(verify_register(register_number) != ASM_SUCCESS)
         return ASM_REGISTER_ERROR;
 
-    *argument_type ^= register_parameter_mask;
-    *argument_type ^= immediate_constant_mask;
+    *argument_type |= register_parameter_mask;
+    *argument_type |= immediate_constant_mask;
 
-    *(double *)(code->output_code + code->output_code_size) = constant_double_value;
+    *(argument_t *)(code->output_code + code->output_code_size) = constant_double_value;
     code->output_code_size++;
-    *(size_t   *)(code->output_code + code->output_code_size) = register_number;
+    *(address_t  *)(code->output_code + code->output_code_size) = register_number;
     code->output_code_size++;
     return ASM_SUCCESS;
 }
@@ -580,18 +578,20 @@ asm_error_t try_read_const_reg(code_t *code) {
 ======================================================================================================
 */
 asm_error_t try_read_const(code_t *code) {
-    uint32_t *argument_type = (uint32_t *)(code->output_code + code->output_code_size - 1);
+    argument_type_t *argument_type         = (argument_type_t *)(code->output_code +
+                                                                 code->output_code_size - 1);
+    argument_t       constant_double_value = 0;
+    char            *source_pointer        = code->source_code +
+                                             code->source_code_position;
 
-    double   constant_double_value  = 0;
-
-    if(sscanf(code->source_code + code->source_code_position,
+    if(sscanf(source_pointer,
               "%lg",
               &constant_double_value) != 1)
         return ASM_UNABLE_READ_ARGUMENT;
 
-    *argument_type ^= immediate_constant_mask;
+    *argument_type |= immediate_constant_mask;
 
-    *(double *)(code->output_code + code->output_code_size) = constant_double_value;
+    *(argument_t *)(code->output_code + code->output_code_size) = constant_double_value;
     code->output_code_size++;
     return ASM_SUCCESS;
 }
@@ -610,20 +610,22 @@ asm_error_t try_read_const(code_t *code) {
 ======================================================================================================
 */
 asm_error_t try_read_reg(code_t *code) {
-    uint32_t *argument_type = (uint32_t *)(code->output_code + code->output_code_size - 1);
+    argument_type_t *argument_type    = (argument_type_t *)(code->output_code +
+                                                            code->output_code_size - 1);
+    char             register_name[3] = {};
+    char            *source_pointer   = code->source_code +
+                                        code->source_code_position;
 
-    char     register_name[3]       = {};
-
-    if(sscanf(code->source_code + code->source_code_position,
+    if(sscanf(source_pointer,
               "%2[abcxspbpdisid]",
               register_name) != 1)
         return ASM_UNABLE_READ_ARGUMENT;
 
-    size_t register_number = get_register_number(register_name);
+    address_t register_number = get_register_number(register_name);
 
-    *argument_type ^= register_parameter_mask;
+    *argument_type |= register_parameter_mask;
 
-    *(size_t   *)(code->output_code + code->output_code_size) = register_number;
+    *(address_t *)(code->output_code + code->output_code_size) = register_number;
     code->output_code_size++;
 
     return ASM_SUCCESS;
@@ -641,7 +643,7 @@ asm_error_t try_read_reg(code_t *code) {
 
 ======================================================================================================
 */
-asm_error_t verify_register(size_t register_number) {
+asm_error_t verify_register(address_t register_number) {
     if(register_number < 1 || register_number > registers_number) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "Unknown register\r\n");

@@ -47,16 +47,17 @@ int main(int argc, const char *argv[]) {
     spu_t spu = {};
     if(argc != 2) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                     "SPU expected to have one parameter (the name of binary).\r\n");
+                     "SPU expected to have name of binary as parameter.\r\n");
         return EXIT_FAILURE;
     }
-    if(init_spu_code(&spu, argv[1]) != SPU_SUCCESS)
+    if(init_spu_code   (&spu,
+                        argv[1]) != SPU_SUCCESS)
         return EXIT_FAILURE;
 
-    if(run_spu_code(&spu) != SPU_SUCCESS)
+    if(run_spu_code    (&spu)    != SPU_SUCCESS)
         return EXIT_FAILURE;
 
-    if(destroy_spu_code(&spu) != SPU_SUCCESS)
+    if(destroy_spu_code(&spu)    != SPU_SUCCESS)
         return EXIT_FAILURE;
 
     return EXIT_SUCCESS;
@@ -92,15 +93,20 @@ spu_error_t init_spu_code(spu_t      *spu,
     }
 
     spu_error_t error_code = SPU_SUCCESS;
-    if((error_code = read_file_header(spu, code_file, file_name)) != SPU_SUCCESS)
+    if((error_code = read_file_header(spu,
+                                      code_file,
+                                      file_name)) != SPU_SUCCESS)
         return error_code;
 
-    if((error_code = read_file_code(spu, code_file, file_name)) != SPU_SUCCESS)
+    if((error_code = read_file_code  (spu,
+                                      code_file,
+                                      file_name)) != SPU_SUCCESS)
         return error_code;
 
     fclose(code_file);
 
-    spu->random_access_memory = (argument_t *)_calloc(random_access_memory_size, sizeof(argument_t));
+    spu->random_access_memory = (argument_t *)_calloc(random_access_memory_size,
+                                                      sizeof(argument_t));
     if(spu->random_access_memory == NULL) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "Error while allocating RAM.\r\n");
@@ -113,6 +119,7 @@ spu_error_t init_spu_code(spu_t      *spu,
                                       file_print_double)
                             stack_init_size,
                             sizeof(argument_t));
+
     if(spu->stack == NULL) {
         free(spu->code);
         return SPU_STACK_ERROR;
@@ -143,7 +150,8 @@ spu_error_t run_spu_code(spu_t *spu) {
         if(error_code != SPU_SUCCESS && error_code != SPU_EXIT_SUCCESS) {
             spu->instruction_pointer--;
             color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                         "Error while running command '0x%llx' on instruction pointer 0x%llx.\r\n"
+                         "Error while running command '0x%llx'\r\n"
+                         "on instruction pointer 0x%llx.\r\n"
                          "Error code '0x%x'\r\n",
                          spu->code[spu->instruction_pointer],
                          spu->instruction_pointer,
@@ -192,9 +200,10 @@ spu_error_t destroy_spu_code(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command(spu_t *spu) {
-    command_t *code_pointer = (command_t *)(spu->code + spu->instruction_pointer);
-    command_t operation_code = code_pointer[1];
+    command_t *code_pointer   = (command_t *)(spu->code +
+                                              spu->instruction_pointer);
     spu->instruction_pointer++;
+    command_t  operation_code = code_pointer[1];
 
     switch(operation_code) {
         case CMD_PUSH:
@@ -243,6 +252,8 @@ spu_error_t run_command(spu_t *spu) {
             return run_command_ret  (spu);
         case CMD_DRAW:
             return run_command_draw (spu);
+        case CMD_CHAI:
+            return run_command_chai (spu);
         case CMD_UNKNOWN:
             return SPU_UNKNOWN_COMMAND;
         default:
@@ -317,7 +328,7 @@ spu_error_t read_file_header (spu_t      *spu,
 spu_error_t read_file_code(spu_t      *spu,
                            FILE       *code_file,
                            const char *file_name) {
-    spu->code = (uint64_t *)_calloc(spu->code_size, sizeof(uint64_t));
+    spu->code = (code_element_t *)_calloc(spu->code_size, sizeof(code_element_t));
     if(spu->code == NULL) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
                      "Error while allocating memory to code array.\r\n");

@@ -16,8 +16,8 @@ struct code_t {
     size_t          source_code_position;
     size_t          source_current_line;
     labels_array_t  labels;
-    uint64_t       *output_code;
-    size_t          output_code_size;
+    code_element_t *output_code;
+    address_t       output_code_size;
 };
 
 struct command_prototype_t {
@@ -48,7 +48,8 @@ static const command_prototype_t supported_commands[] = {
     {.command_name = "pop" , .command_value = CMD_POP },
     {.command_name = "call", .command_value = CMD_CALL},
     {.command_name = "ret" , .command_value = CMD_RET },
-    {.command_name = "draw", .command_value = CMD_DRAW}
+    {.command_name = "draw", .command_value = CMD_DRAW},
+    {.command_name = "chai", .command_value = CMD_CHAI}
 };
 
 #endif

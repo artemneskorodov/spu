@@ -22,20 +22,17 @@ enum spu_error_t {
     SPU_WRONG_ASSEMBLER    = 11,
 };
 
-typedef double argument_t;
-
-static const size_t random_access_memory_size = 16384;
-
 struct spu_t {
-    stack_t       *stack;
-    uint64_t      *code;
-    size_t         code_size;
-    size_t         instruction_pointer;
-    argument_t     registers[registers_number];
-    argument_t    *random_access_memory;
-    argument_t     push_register;
+    stack_t        *stack;
+    code_element_t *code;
+    address_t       code_size;
+    address_t       instruction_pointer;
+    argument_t      registers[registers_number];
+    argument_t     *random_access_memory;
+    argument_t      push_register;
 };
 
+spu_error_t run_command_chai(spu_t *spu);
 spu_error_t run_command_push (spu_t *spu);
 spu_error_t run_command_add  (spu_t *spu);
 spu_error_t run_command_sub  (spu_t *spu);
