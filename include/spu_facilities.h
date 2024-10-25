@@ -32,6 +32,7 @@ enum command_t : uint8_t {
     CMD_RET     = 0x16,
     CMD_DRAW    = 0x17,
     CMD_CHAI    = 0x18,
+//CHANGE PROCESSOR_FIRST_COMMAND AND PROCESSOR_LAST_COMMAND WHEN CHANGING THIS ENUM!!!
 };
 
 #pragma GCC diagnostic push
@@ -39,6 +40,7 @@ enum command_t : uint8_t {
 
 static const command_t  processor_first_command   = CMD_PUSH;
 static const command_t  processor_last_command    = CMD_CHAI;
+//when changing register names array, it is necessary to change formats in compiler.
 static const char      *spu_register_names[]      = {"ax", "bx", "cx", "sp",
                                                      "bp", "di", "si", "dx"};
 static const address_t  registers_number          = 4;

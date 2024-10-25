@@ -32,6 +32,7 @@ static spu_error_t read_file_header (spu_t      *spu,
 static spu_error_t read_file_code   (spu_t      *spu,
                                      FILE       *code_file,
                                      const char *file_name);
+static spu_error_t validate_commands(void);
 
 /**
 ======================================================================================================
@@ -47,6 +48,9 @@ static spu_error_t read_file_code   (spu_t      *spu,
 ======================================================================================================
 */
 int main(int argc, const char *argv[]) {
+    if(validate_commands() != SPU_SUCCESS)
+        return SPU_COMMANDS_ERROR;
+
     spu_t spu = {};
     if(argc != 2) {
         color_printf(RED_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
@@ -293,6 +297,15 @@ spu_error_t read_file_code(spu_t      *spu,
         fclose(code_file);
         _free(spu->code);
         return SPU_READING_ERROR;
+    }
+    return SPU_SUCCESS;
+}
+
+spu_error_t validate_commands(void) {
+    size_t commands_number = sizeof(command_handlers) / sizeof(command_handlers[0]);
+    for(size_t index = 1; index < commands_number; index++) {
+        if(command_handlers[index].operation_code != (command_t)index)
+            return SPU_COMMANDS_ERROR;
     }
     return SPU_SUCCESS;
 }

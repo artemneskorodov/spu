@@ -627,7 +627,7 @@ spu_error_t run_command_draw(spu_t *spu) {
         buffer[buffer_index++] = '\n';
     }
 
-    Sleep(30);
+    Sleep(20);
     system("cls");
     fputs(buffer, stderr);
     return SPU_SUCCESS;
@@ -847,6 +847,19 @@ spu_error_t copy_argument(spu_t *spu,
     return SPU_SUCCESS;
 }
 
+/**
+======================================================================================================
+    @brief      Checks if command is valid.
+
+    @details    Commands are treated as valid if their numerical value
+                lies between first and last command.
+
+    @param [in] operation_code      Command
+
+    @return Error code
+
+======================================================================================================
+*/
 bool is_command_supported (command_t operation_code) {
     if(operation_code >= processor_first_command &&
        operation_code <= processor_last_command)

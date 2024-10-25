@@ -22,6 +22,7 @@ enum spu_error_t {
     SPU_WRONG_ASSEMBLER = 11,
     SPU_MEMSET_ERROR    = 12,
     SPU_DUMP_ERROR      = 13,
+    SPU_COMMANDS_ERROR  = 14,
 };
 
 struct spu_t {
