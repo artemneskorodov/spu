@@ -413,10 +413,11 @@ command_t get_command_value(const char *command_name) {
 
     size_t commands_number = sizeof(supported_commands) / sizeof(supported_commands[0]);
     for(size_t index = 0; index < commands_number; index++) {
-        const char *current_command = supported_commands[index].command_name;
-        if(strcmp(command_name, current_command) == 0)
-            return supported_commands[index].command_value;
+        const command_prototype_t *current_command = supported_commands + index;
+        if(strcmp(command_name, current_command->command_name) == 0)
+            return current_command->command_value;
     }
+
     return CMD_UNKNOWN;
 }
 
@@ -443,11 +444,11 @@ asm_error_t try_read_RAM_const_reg(code_t *code) {
     asm_error_t error_code                              = ASM_SUCCESS;
 
     if(sscanf(source_pointer,
-              "[%2[abcxspbpdisid] + %llu]",
+              "[%2[abcxspdi] + %llu]",
               register_name,
               &constant_integer_value) != 2 &&
        sscanf(source_pointer,
-              "[%llu + %2[abcxspbpdisid]]",
+              "[%llu + %2[abcxspdi]]",
               &constant_integer_value,
               register_name) != 2)
         return ASM_UNABLE_READ_ARGUMENT;
@@ -526,7 +527,7 @@ asm_error_t try_read_RAM_reg(code_t *code) {
     asm_error_t error_code                              = ASM_SUCCESS;
 
     if(sscanf(source_pointer,
-              "[%2[abcxspbpdisid]]",
+              "[%2[abcxspdi]]",
               register_name) != 1)
         return ASM_UNABLE_READ_ARGUMENT;
 
@@ -566,11 +567,11 @@ asm_error_t try_read_const_reg(code_t *code) {
     asm_error_t error_code                              = ASM_SUCCESS;
 
     if(sscanf(source_pointer,
-              "%lg + %2[abcxspbpdisid]",
+              "%lg + %2[abcxspdi]",
               &constant_double_value,
               register_name) != 2 &&
        sscanf(source_pointer,
-              "%2[abcxspbpdisid] + %lg",
+              "%2[abcxspdi] + %lg",
               register_name,
               &constant_double_value) != 2)
         return ASM_UNABLE_READ_ARGUMENT;
@@ -647,7 +648,7 @@ asm_error_t try_read_reg(code_t *code) {
     asm_error_t error_code                              = ASM_SUCCESS;
 
     if(sscanf(source_pointer,
-              "%2[abcxspbpdisid]",
+              "%2[abcxspdi]",
               register_name) != 1)
         return ASM_UNABLE_READ_ARGUMENT;
 

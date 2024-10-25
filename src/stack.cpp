@@ -435,9 +435,6 @@ stack_error_t stack_verify(stack_t *stack) {
     if(stack->size > stack->capacity)
         return STACK_INCORRECT_SIZE;
 
-    if(stack->capacity < stack->init_capacity)
-        return STACK_INVALID_CAPACITY;
-
     #ifdef STACK_CANARY_PROTECTION
         if(stack->data != (char *)(stack + 1) + sizeof(canary_t))
             return STACK_INVALID_DATA;

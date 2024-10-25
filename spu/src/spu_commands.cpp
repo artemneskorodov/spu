@@ -811,8 +811,8 @@ spu_error_t jump_with_condition(spu_t  *spu,
 
 ======================================================================================================
 */
-static spu_error_t calculate_for_one(spu_t       *spu,
-                                     argument_t (*function)(argument_t item)) {
+spu_error_t calculate_for_one(spu_t       *spu,
+                              argument_t (*function)(argument_t item)) {
     argument_t item = 0;
     if(stack_pop(&spu->stack, &item) != STACK_SUCCESS)
         return SPU_STACK_ERROR;
@@ -845,4 +845,12 @@ spu_error_t copy_argument(spu_t *spu,
 
     spu->instruction_pointer += sizeof(uint64_t);
     return SPU_SUCCESS;
+}
+
+bool is_command_supported (command_t operation_code) {
+    if(operation_code >= processor_first_command &&
+       operation_code <= processor_last_command)
+        return true;
+
+    return false;
 }

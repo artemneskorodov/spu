@@ -73,7 +73,7 @@ argument_t div_values(argument_t first, argument_t second) {
 ======================================================================================================
 */
 bool is_below(argument_t first, argument_t second) {
-    if(second < first)
+    if(second < first && !is_equal(first, second))
         return true;
 
     return false;
@@ -109,7 +109,7 @@ bool is_below_or_equal(argument_t first, argument_t second) {
 ======================================================================================================
 */
 bool is_above(argument_t first, argument_t second) {
-    if(second > first)
+    if(second > first && !is_equal(first, second))
         return true;
 
     return false;

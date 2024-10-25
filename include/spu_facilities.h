@@ -37,6 +37,8 @@ enum command_t : uint8_t {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
+static const command_t  processor_first_command   = CMD_PUSH;
+static const command_t  processor_last_command    = CMD_CHAI;
 static const char      *spu_register_names[]      = {"ax", "bx", "cx", "sp",
                                                      "bp", "di", "si", "dx"};
 static const address_t  registers_number          = 4;

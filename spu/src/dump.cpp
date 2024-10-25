@@ -1,11 +1,17 @@
 #include "dump.h"
 #include "colors.h"
 
+/**
+======================================================================================================
+    @brief Number of elements in one line of code table in dump.
+
+======================================================================================================
+*/
+static const size_t dump_elements_in_line = 15;
+
 //====================================================================================================
 //FUNCTIONS PROTOTYPES
 //====================================================================================================
-static const size_t dump_elements_in_line = 15;
-
 static spu_error_t  print_code_line     (spu_t    *spu,
                                          size_t    line,
                                          size_t    width);
@@ -65,8 +71,6 @@ spu_error_t write_code_dump(spu_t *spu) {
 
     @return Error code
 
-    @todo
-
 ======================================================================================================
 */
 spu_error_t write_registers_dump(spu_t *spu) {
@@ -101,8 +105,6 @@ spu_error_t write_registers_dump(spu_t *spu) {
 
     @return Error code
 
-    @todo
-
 =======================================================================================================
 */
 spu_error_t write_ram_dump(spu_t *spu) {
@@ -112,13 +114,13 @@ spu_error_t write_ram_dump(spu_t *spu) {
                  "|_____________________________________|\r\n");
 
     for(address_t item = 0; item < random_access_memory_size; item++) {
-        color_printf(YELLOW_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND, "|");
+        color_printf(YELLOW_TEXT,  BOLD_TEXT, DEFAULT_BACKGROUND, "|");
         color_printf(MAGENTA_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND, "  % 16llu",
                      item);
         color_printf(YELLOW_TEXT,  BOLD_TEXT, DEFAULT_BACKGROUND, "|");
         color_printf(DEFAULT_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND, "0x%016llx",
                      spu->random_access_memory[item]);
-        color_printf(YELLOW_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
+        color_printf(YELLOW_TEXT,  BOLD_TEXT, DEFAULT_BACKGROUND,
                      "|\r\n"
                      "|__________________|__________________|\r\n");
     }
@@ -141,27 +143,29 @@ spu_error_t write_ram_dump(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t print_code_line(spu_t *spu, size_t line, size_t width) {
-    size_t instruction_pointer_element = dump_elements_in_line;
+    size_t ip_elem = dump_elements_in_line;
     if(spu->instruction_pointer >= line * dump_elements_in_line &&
        spu->instruction_pointer < (line + 1) * dump_elements_in_line)
-        instruction_pointer_element = spu->instruction_pointer - line * dump_elements_in_line;
+        ip_elem = spu->instruction_pointer - line * dump_elements_in_line;
 
-    if(print_top_border(width) != SPU_SUCCESS)
-        return SPU_DUMP_ERROR;
+    spu_error_t error_code = SPU_SUCCESS;
 
-    if(print_code_indexes(width, instruction_pointer_element, line) != SPU_SUCCESS)
-        return SPU_DUMP_ERROR;
+    if((error_code = print_top_border   (width)                    ) != SPU_SUCCESS)
+        return error_code;
 
-    if(print_bottom_border(width, instruction_pointer_element) != SPU_SUCCESS)
-        return SPU_DUMP_ERROR;
+    if((error_code = print_code_indexes (width, ip_elem, line)     ) != SPU_SUCCESS)
+        return error_code;
 
-    if(print_code_elements(spu, width, instruction_pointer_element, line) != SPU_SUCCESS)
-        return SPU_DUMP_ERROR;
+    if((error_code = print_bottom_border(width, ip_elem)           ) != SPU_SUCCESS)
+        return error_code;
 
-    if(print_bottom_border(width, instruction_pointer_element) != SPU_SUCCESS)
-        return SPU_DUMP_ERROR;
+    if((error_code = print_code_elements(spu, width, ip_elem, line)) != SPU_SUCCESS)
+        return error_code;
 
-    fputs("\r\n\r\n", stdout);
+    if((error_code = print_bottom_border(width, ip_elem)           ) != SPU_SUCCESS)
+        return error_code;
+
+    fputs("\r\n", stdout);
     return SPU_SUCCESS;
 }
 
@@ -209,7 +213,7 @@ spu_error_t print_code_indexes(size_t width, size_t ip_elem, size_t line) {
             background = GREEN_BACKGROUND;
 
         color_printf(BLUE_TEXT,    BOLD_TEXT, DEFAULT_BACKGROUND, "|");
-        color_printf(MAGENTA_TEXT, BOLD_TEXT, background,         "% 8llu",
+        color_printf(MAGENTA_TEXT, BOLD_TEXT, background, "% 8llu",
                      elem + line * dump_elements_in_line);
     }
 
@@ -239,7 +243,7 @@ spu_error_t print_bottom_border(size_t width, size_t ip_elem) {
             background = GREEN_BACKGROUND;
 
         color_printf(BLUE_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND, "|");
-        color_printf(BLUE_TEXT, BOLD_TEXT, background,         "________");
+        color_printf(BLUE_TEXT, BOLD_TEXT, background, "________");
     }
     color_printf(BLUE_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND, "|\r\n");
     return SPU_SUCCESS;
@@ -269,7 +273,7 @@ spu_error_t print_code_elements(spu_t *spu, size_t width, size_t ip_elem, size_t
             background = GREEN_BACKGROUND;
 
         color_printf(BLUE_TEXT   , BOLD_TEXT, DEFAULT_BACKGROUND, "|");
-        color_printf(DEFAULT_TEXT, BOLD_TEXT, background,         "  0x%02x  ",
+        color_printf(DEFAULT_TEXT, BOLD_TEXT, background, "  0x%02x  ",
                      spu->code[elem + line * dump_elements_in_line]);
     }
     color_printf(BLUE_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND, "|\r\n");

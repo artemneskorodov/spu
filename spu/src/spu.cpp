@@ -205,60 +205,10 @@ spu_error_t destroy_spu_code(spu_t *spu) {
 spu_error_t run_command(spu_t *spu) {
     command_t operation_code = (command_t)(spu->code[spu->instruction_pointer++] &
                                            operation_code_mask);
-    switch(operation_code) {
-        case CMD_PUSH:
-            return run_command_push (spu);
-        case CMD_ADD:
-            return run_command_add  (spu);
-        case CMD_SUB:
-            return run_command_sub  (spu);
-        case CMD_MUL:
-            return run_command_mul  (spu);
-        case CMD_DIV:
-            return run_command_div  (spu);
-        case CMD_OUT:
-            return run_command_out  (spu);
-        case CMD_IN:
-            return run_command_in   (spu);
-        case CMD_SQRT:
-            return run_command_sqrt (spu);
-        case CMD_SIN:
-            return run_command_sin  (spu);
-        case CMD_COS:
-            return run_command_cos  (spu);
-        case CMD_DUMP:
-            return run_command_dump (spu);
-        case CMD_HLT:
-            return run_command_hlt  (spu);
-        case CMD_JMP:
-            return run_command_jmp  (spu);
-        case CMD_JA:
-            return run_command_ja   (spu);
-        case CMD_JB:
-            return run_command_jb   (spu);
-        case CMD_JAE:
-            return run_command_jae  (spu);
-        case CMD_JBE:
-            return run_command_jbe  (spu);
-        case CMD_JE:
-            return run_command_je   (spu);
-        case CMD_JNE:
-            return run_command_jne  (spu);
-        case CMD_POP:
-            return run_command_pop  (spu);
-        case CMD_CALL:
-            return run_command_call (spu);
-        case CMD_RET:
-            return run_command_ret  (spu);
-        case CMD_DRAW:
-            return run_command_draw (spu);
-        case CMD_CHAI:
-            return run_command_chai (spu);
-        case CMD_UNKNOWN:
-            return SPU_UNKNOWN_COMMAND;
-        default:
-            return SPU_UNKNOWN_COMMAND;
-    }
+    if(!is_command_supported(operation_code))
+        return SPU_UNKNOWN_COMMAND;
+
+    return command_handlers[operation_code].handler(spu);
 }
 
 /**
