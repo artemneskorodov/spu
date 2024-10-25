@@ -93,11 +93,18 @@ asm_error_t parse_line(code_t *code) {
     if((error_code = read_command(code, command)) != ASM_SUCCESS)
         return error_code;
 
-    if(is_label(command))
-        return code_add_label(&code->labels,
-                              command,
-                              code->output_code_size,
-                              true);
+    if(is_label(command)) {
+        if((error_code = code_add_label(&code->labels,
+                                        command,
+                                        code->output_code_size,
+                                        true)) != ASM_SUCCESS)
+            return error_code;
+
+        if((error_code = code_move_next_line(code)) != ASM_SUCCESS)
+            return error_code;
+
+        return ASM_SUCCESS;
+    }
 
     if((error_code = parse_command(code, command)) != ASM_SUCCESS)
         return error_code;
@@ -220,8 +227,12 @@ asm_error_t parse_command(code_t *code, char *command) {
 ======================================================================================================
 */
 asm_error_t code_move_next_line(code_t *code) {
-    while(code->source_code[code->source_code_position] != '\n')
+    while(code->source_code[code->source_code_position] != '\n' &&
+          code->source_code[code->source_code_position] != '\0')
         code->source_code_position++;
+
+    if(code->source_code[code->source_code_position] == '\0')
+        return ASM_SUCCESS;
 
     if(code->source_code[code->source_code_position + 1] == '\0') {
         code->source_code_position++;

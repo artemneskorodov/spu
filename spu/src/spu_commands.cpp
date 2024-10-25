@@ -6,52 +6,31 @@
 #include "spu_commands.h"
 #include "colors.h"
 #include "utils.h"
+#include "dump.h"
+#include "commands_utils.h"
 
 //====================================================================================================
 //FUNCTIONS PROTOTYPES
 //====================================================================================================
-static argument_t  *get_args_push_pop    (spu_t          *spu);
-static spu_error_t  write_code_dump      (spu_t          *spu);
-static spu_error_t  write_registers_dump (spu_t          *spu);
-static spu_error_t  write_ram_dump       (spu_t          *spu);
-static spu_error_t  pop_two_elements     (spu_t          *spu,
-                                          argument_t     *first,
-                                          argument_t     *second);
-static argument_t  *get_pop_argument     (spu_t          *spu);
-static argument_t  *get_memory_address   (spu_t          *spu,
-                                          command_t       argument_type);
-static argument_t  *get_push_argument    (spu_t          *spu,
-                                          command_t       argument_type);
-static bool         is_below             (argument_t      first,
-                                          argument_t      second);
-static bool         is_below_or_equal    (argument_t      first,
-                                          argument_t      second);
-static bool         is_above             (argument_t      first,
-                                          argument_t      second);
-static bool         is_above_or_equal    (argument_t      first,
-                                          argument_t      second);
-static bool         is_equal             (argument_t      first,
-                                          argument_t      second);
-static bool         is_not_equal         (argument_t      first,
-                                          argument_t      second);
-static argument_t   add_values           (argument_t      first,
-                                          argument_t      second);
-static argument_t   sub_values           (argument_t      first,
-                                          argument_t      second);
-static argument_t   mul_values           (argument_t      first,
-                                          argument_t      second);
-static argument_t   div_values           (argument_t      first,
-                                          argument_t      second);
-static spu_error_t  jump_with_condition  (spu_t          *spu,
-                                          bool          (*comparator) (argument_t first,
-                                                                       argument_t second));
-static spu_error_t  calculate_for_two    (spu_t           *spu,
-                                          argument_t     (*function)  (argument_t first,
-                                                                       argument_t second));
-static spu_error_t  calculate_for_one    (spu_t           *spu,
-                                          argument_t     (*function)  (argument_t item));
-static spu_error_t  copy_argument        (spu_t           *spu,
-                                          void            *output);
+static argument_t  *get_args_push_pop   (spu_t       *spu);
+static spu_error_t  pop_two_elements    (spu_t       *spu,
+                                         argument_t  *first,
+                                         argument_t  *second);
+static argument_t  *get_pop_argument    (spu_t       *spu);
+static argument_t  *get_memory_address  (spu_t       *spu,
+                                         command_t    argument_type);
+static argument_t  *get_push_argument   (spu_t       *spu,
+                                         command_t    argument_type);
+static spu_error_t  jump_with_condition (spu_t       *spu,
+                                         bool       (*comparator) (argument_t first,
+                                                                   argument_t second));
+static spu_error_t  calculate_for_two   (spu_t       *spu,
+                                         argument_t (*function)   (argument_t first,
+                                                                   argument_t second));
+static spu_error_t  calculate_for_one   (spu_t       *spu,
+                                         argument_t (*function)   (argument_t item));
+static spu_error_t  copy_argument       (spu_t       *spu,
+                                         void        *output);
 
 /**
 ======================================================================================================
@@ -60,7 +39,7 @@ static spu_error_t  copy_argument        (spu_t           *spu,
     @details    Uses get_args_push_pop to get command arguments.
                 It is expected that argument flags are set correctly and
                 all arguments occur in right order:
-                constant value, register value.
+                constant value and than register value.
 
     @param [in] spu                 SPU structure
 
@@ -281,81 +260,6 @@ spu_error_t run_command_dump(spu_t *spu) {
 
 /**
 ======================================================================================================
-    @brief      Dumps code array
-
-    @details    Prints code array as table
-                All indexes are printed as decimal numbers and
-                all values in code are printed as hex numbers
-
-    @param [in] spu                 SPU structure
-
-    @return Error code
-
-======================================================================================================
-*/
-spu_error_t write_code_dump(spu_t *spu) {
-    color_printf(BLUE_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                 " _____________________________________ \r\n"
-                 "|                Code:                |\r\n"
-                 "|_____________________________________|\r\n");
-
-    printf("not implemented\r\n");
-
-    return SPU_SUCCESS;
-}
-
-/**
-======================================================================================================
-    @brief      Dumps registers
-
-    @details    Prints registers array as table.
-                Uses intel register names.
-                Values that are stored in registers are printed as hex numbers.
-
-    @param [in] spu                 SPU structure
-
-    @return Error code
-
-======================================================================================================
-*/
-spu_error_t write_registers_dump(spu_t *spu) {
-    color_printf(CYAN_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                 " _____________________________________ \r\n"
-                 "|              Registers:             |\r\n"
-                 "|_____________________________________|\r\n");
-
-    printf("not implemented\r\n");
-
-    return SPU_SUCCESS;
-}
-
-/**
-======================================================================================================
-    @brief      Dumps RAM
-
-    @details    Prints RAM array as table.
-                All indexes are printed as decimal numbers and
-                all values, stored in RAM, printed as hex numbers.
-
-    @param [in] spu                 SPU structure
-
-    @return Error code
-
-=======================================================================================================
-*/
-spu_error_t write_ram_dump(spu_t *spu) {
-    color_printf(YELLOW_TEXT, BOLD_TEXT, DEFAULT_BACKGROUND,
-                 " _____________________________________ \r\n"
-                 "|         Random Access Memory        |\r\n"
-                 "|_____________________________________|\r\n");
-
-    printf("not implemented\r\n");
-
-    return SPU_SUCCESS;
-}
-
-/**
-======================================================================================================
     @brief      Runs command HLT
 
     @details    The return value represents that program is finished.
@@ -531,8 +435,7 @@ spu_error_t run_command_pop(spu_t *spu) {
 ======================================================================================================
 */
 spu_error_t run_command_call(spu_t *spu) {
-    address_t   return_pointer = spu->instruction_pointer + sizeof(address_t);
-    spu_error_t error_code     = SPU_SUCCESS;
+    address_t return_pointer = spu->instruction_pointer + sizeof(address_t);
 
     if(stack_push(&spu->stack, &return_pointer) != STACK_SUCCESS)
         return SPU_STACK_ERROR;
@@ -631,8 +534,8 @@ argument_t *get_pop_argument(spu_t *spu) {
 
 ======================================================================================================
 */
-argument_t *get_push_argument(spu_t          *spu,
-                              command_t       argument_type) {
+argument_t *get_push_argument(spu_t     *spu,
+                              command_t  argument_type) {
     spu->push_register = 0;
     spu_error_t error_code = SPU_SUCCESS;
 
@@ -671,8 +574,8 @@ argument_t *get_push_argument(spu_t          *spu,
 
 ======================================================================================================
 */
-argument_t *get_memory_address(spu_t          *spu,
-                               command_t       argument_type) {
+argument_t *get_memory_address(spu_t     *spu,
+                               command_t  argument_type) {
     address_t   ram_address = 0;
     spu_error_t error_code  = SPU_SUCCESS;
 
@@ -846,9 +749,9 @@ spu_error_t pop_two_elements(spu_t      *spu,
 
 ======================================================================================================
 */
-spu_error_t calculate_for_two(spu_t        *spu,
-                              argument_t  (*function)(argument_t first,
-                                                      argument_t second)) {
+spu_error_t calculate_for_two(spu_t       *spu,
+                              argument_t (*function)(argument_t first,
+                                                     argument_t second)) {
     argument_t first_item  = 0,
                second_item = 0;
 
@@ -896,173 +799,6 @@ spu_error_t jump_with_condition(spu_t  *spu,
 
 /**
 ======================================================================================================
-    @brief      Adds first and second.
-
-    @param [in] first               First value to add.
-    @param [in] second              Second value to add.
-
-    @return Result of summation
-
-======================================================================================================
-*/
-argument_t add_values(argument_t first, argument_t second) {
-    return second + first;
-}
-
-/**
-======================================================================================================
-    @brief      Subtracts first from second.
-
-    @param [in] first               First value to subtract.
-    @param [in] second              Second value to subtract.
-
-    @return Result of subtraction
-
-======================================================================================================
-*/
-argument_t sub_values(argument_t first, argument_t second) {
-    return second - first;
-}
-
-/**
-======================================================================================================
-    @brief      Multiplies first and second.
-
-    @param [in] first               First value to multiply.
-    @param [in] second              Second value to multiply.
-
-    @return Product of first and second.
-
-======================================================================================================
-*/
-argument_t mul_values(argument_t first, argument_t second) {
-    return second * first;
-}
-
-/**
-======================================================================================================
-    @brief      Divides second value by first.
-
-    @param [in] first               First value to divide.
-    @param [in] second              Second value to divide.
-
-    @return Result of division
-
-======================================================================================================
-*/
-argument_t div_values(argument_t first, argument_t second) {
-    return second / first;
-}
-
-/**
-======================================================================================================
-    @brief      Checks if second value is less than first.
-
-    @param [in] first               First value to compare.
-    @param [in] second              Second value to compare.
-
-    @return True if second is less than first
-
-======================================================================================================
-*/
-bool is_below(argument_t first, argument_t second) {
-    if(second < first)
-        return true;
-
-    return false;
-}
-
-/**
-======================================================================================================
-    @brief      Checks if second value is less than or equal to first.
-
-    @param [in] first               First value to compare.
-    @param [in] second              Second value to compare.
-
-    @return True if second is less than or equal to first
-
-======================================================================================================
-*/
-bool is_below_or_equal(argument_t first, argument_t second) {
-    if(second < first || is_equal(first, second))
-        return true;
-
-    return false;
-}
-
-/**
-======================================================================================================
-    @brief      Checks if second value is bigger than first.
-
-    @param [in] first               First value to compare.
-    @param [in] second              Second value to compare.
-
-    @return True if second is bigger than first
-
-======================================================================================================
-*/
-bool is_above(argument_t first, argument_t second) {
-    if(second > first)
-        return true;
-
-    return false;
-}
-
-/**
-======================================================================================================
-    @brief      Checks if second value is bigger than or equal to first.
-
-    @param [in] first               First value to compare.
-    @param [in] second              Second value to compare.
-
-    @return True if second is bigger than or equal to first
-
-======================================================================================================
-*/
-bool is_above_or_equal(argument_t first, argument_t second) {
-    if(second > first || is_equal(first, second))
-        return true;
-
-    return false;
-}
-
-/**
-======================================================================================================
-    @brief      Checks if second value is equal to first.
-
-    @param [in] first               First value to compare.
-    @param [in] second              Second value to compare.
-
-    @return True if second is equal to first
-
-======================================================================================================
-*/
-bool is_equal(argument_t first, argument_t second) {
-    const argument_t epsilon = 10e-6;
-
-    if(fabs(first - second) < epsilon)
-        return true;
-
-    return false;
-}
-
-/**
-======================================================================================================
-    @brief      Checks if second value is not equal first.
-
-    @param [in] first               First value to compare.
-    @param [in] second              Second value to compare.
-
-    @return True if second is not equal first
-
-======================================================================================================
-*/
-bool is_not_equal(argument_t first, argument_t second) {
-    return !is_equal(first, second);
-}
-
-/**
-======================================================================================================
     @brief      Pushes function result to stack.
 
     @details    Pops one element from stack and passes it to function given by caller.
@@ -1075,8 +811,8 @@ bool is_not_equal(argument_t first, argument_t second) {
 
 ======================================================================================================
 */
-static spu_error_t calculate_for_one     (spu_t           *spu,
-                                          argument_t     (*function)  (argument_t item)) {
+static spu_error_t calculate_for_one(spu_t       *spu,
+                                     argument_t (*function)(argument_t item)) {
     argument_t item = 0;
     if(stack_pop(&spu->stack, &item) != STACK_SUCCESS)
         return SPU_STACK_ERROR;
